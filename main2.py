@@ -16,19 +16,30 @@ import skimage
 from skimage.io import imsave
 import resource
 import torch.nn.functional as F
+from tensorboard_logger import configure, log_value
+from tensorboardX import SummaryWriter
+
+configure("./log_dir/", flush_secs=5)
+
 np.set_printoptions(threshold=np.nan)
 
 # rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 # resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
+
+summary_writer = SummaryWriter("./log_dir/")
+
+
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', help='path to data folder', required=True)
 parser.add_argument('--image_dim', type=int, help='image dimensions', required=True)
 parser.add_argument('--load_prev_model_gen', help='path to previous model')
-parser.add_argument('--load_prev_model_dec', help='decoder path')
+parser.add_argument('--load_prev_model_disc', help='decoder path')
 parser.add_argument('--batch_size_train', type=int, help="train batch size")
 parser.add_argument('--batch_size_test', type=int, help="test batch size")
-parser.add_argument('--load_prev_model_disc', help='discriminator path')
+# parser.add_argument('--load_prev_model_disc', help='discriminator path')
 parser.add_argument('--reset_files', help='reset file stats(True/False)')
 parser.add_argument("--start_epoch", type=int, help="specify start epoch to continue from")
 parser.add_argument("--end_epoch", type=int, help="specify end epoch to continue to")
@@ -159,7 +170,13 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 			value = 'Iter : %d Batch: %d D loss real: %.4f D Loss fake: %.4f AE loss: %.4f\n'%(i, j, loss_real.item(), loss_fake.item(), loss_l.item())
 			print(value)
-			
+			summary_writer.add_scalar("D_real", loss_real.item())
+			summary_writer.add_scalar("D_fake", loss_fake.item())
+			summary_writer.add_scalar("AE loss", loss_l.item())
+			# log_value('D real', loss_real.item())
+			# log_value('D fake', loss_fake.item())
+			# log_value('AE loss', loss_l.item())
+
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
 				draw_outputs(i, g_model, now, args.data_path, filenames)
@@ -223,8 +240,9 @@ def test_model(model, test_loader, epoch, now, test_len=100):
 			np_image = np.dstack((image, a_channel, b_channel))
 			np_rgb = cv2.cvtColor(np_image, cv2.COLOR_LAB2RGB)
 
-			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch)+ '_' + name[j]
+			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + name[j]
 			# exit()
+			summary_writer.add_image("test image " + '_' + str(epoch) +'_'+ str(j) + '_' + name[j], np_rgb)
 			imsave(file_name, np_rgb)
 			cv2.imwrite(file_name.split('.png')[0] + '_mri.png', image)
 			with open(EVAL_DIR+now+'/order.txt', 'a') as f:
@@ -258,7 +276,7 @@ def draw_outputs(epoch, model, now, dset_path, filenames):
 		images = []
 		base_dir = dset_path + SCAN_DIR + '/'
 		image_names = os.listdir(base_dir)
-		for index in indices:
+		for i,  index in enumerate(indices):
 			image = cv2.imread(base_dir + filenames[index], 0)
 			input_image = torch.from_numpy(image).float()
 			input_image = input_image.unsqueeze(0)
@@ -283,7 +301,8 @@ def draw_outputs(epoch, model, now, dset_path, filenames):
 			
 			img_composed = np.dstack((image, a_channel, b_channel))
 			img_rgb = cv2.cvtColor(img_composed, cv2.COLOR_LAB2RGB)
-
+			
+			summary_writer.add_image("random image " + '_' + str(epoch) +'_' + str(i) + '_' + filenames[index], img_rgb)
 			file_name = (RANDOM_OUTPUTS_DIR + now + '/' +  'cimg_'+ str(epoch)+ '_' + filenames[index]).strip()
 
 			imsave(file_name.split('.png')[0] + '_mri.png', image)
@@ -356,6 +375,14 @@ def main():
 	# g_model = nn.DataParallel(g_model)
 	# d_model = nn.DataParallel(d_model)
 
+	if args.load_prev_model_disc:
+		d_model.load_state_dict(torch.load(args.load_prev_model_disc))
+		print('Discriminator loaded successfully')
+
+	if args.load_prev_model_gen:
+		g_model.load_state_dict(torch.load(args.load_prev_model_gen))
+		print('Generator loaded successfully')
+	# exit()
 	g_model = g_model.to(device)
 	d_model = d_model.to(device)
 

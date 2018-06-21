@@ -1,6 +1,6 @@
 rand_outputs/
 test_outputs/
-
+log_dir/
 __pycache__/
 trained_models/
 
