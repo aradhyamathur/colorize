@@ -28,32 +28,32 @@ class Encoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.kaiming_uniform_(m.weight)
+				nn.init.xavier_uniform_(m.weight)
 	
 	def forward(self, x):
 
 		#print('ENCODER')
 
-		out = self.bn1(F.relu(self.conv1(x)))
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
 
 		#print('Conv1:', out.shape)
 
-		out = self.bn2(F.relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 
 		#print('Conv2: ', out.shape)
 
-		out = self.bn3(F.relu(self.conv3(out)))
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
 
 		#print('Conv3: ', out.shape)
 
-		out = self.bn4(F.relu(self.conv4(out)))
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
 
 		#print('Conv4: ', out.shape)
-		out = self.bn5(F.relu(self.conv5(out)))
+		out = self.bn5(F.leaky_relu(self.conv5(out)))
 
-		out = self.bn6(F.relu(self.conv6(out)))
+		out = self.bn6(F.leaky_relu(self.conv6(out)))
 		
-		out = self.bn7(F.relu(self.conv7(out)))
+		out = self.bn7(F.leaky_relu(self.conv7(out)))
 		
 		return out
 
@@ -77,7 +77,7 @@ class Decoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.kaiming_uniform_(m.weight)
+				nn.init.xavier_uniform_(m.weight)
 
 	def forward(self, x):
 
@@ -131,25 +131,25 @@ class ColorDecoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.kaiming_uniform_(m.weight)
+				nn.init.xavier_uniform_(m.weight)
 
 	def forward(self, x):
 
 		#print('DECODER')
-		out = self.bn1(F.relu(self.conv1(x)))
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
 		#print('Conv1 : ', out.shape)
 
 		out = self.upsample1(out)
 
-		out = self.bn2(F.relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 		#print('Conv2: ', out.shape)
 
 		out = self.upsample2(out)
 
-		out = self.bn3(F.relu(self.conv3(out)))
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
 		#print('Conv3: ', out.shape)
 
-		out = self.bn4(F.relu(self.conv4(out)))
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
 
 		out = self.bn5(F.relu(self.conv5(out)))
 
@@ -216,27 +216,27 @@ class Discriminator(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.kaiming_uniform_(m.weight)
+				nn.init.xavier_uniform_(m.weight)
 
 	def forward(self, x):
 
 		# print('Discriminator')
 
-		out = self.bn1(F.relu(self.conv1(x)))
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
 		# print(out.shape)
-		out = self.bn2(F.relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 		# print(out.shape)
-		out = self.bn3(F.relu(self.conv3(out)))
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
 		# print(out.shape)
-		out = self.bn4(F.relu(self.conv4(out)))
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
 		# print('conv4', out.shape)
 		# print(x.shape[0])
 		out = out.view(x.shape[0], -1)
 		# print('reshaped ', out.shape)
-		out = F.relu(self.linear1(out))
+		out = F.leaky_relu(self.linear1(out))
 
 		out = self.dropout1(out)
-		out = F.relu(self.linear2(out))
+		out = F.leaky_relu(self.linear2(out))
 		out = self.dropout2(out)
 		out = F.sigmoid(self.linear3(out))
 		return out

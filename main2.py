@@ -99,7 +99,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 20
+	test_iter = 50
 	if args.test_mode:
 		draw_iter = 1
 		all_save_iter = 1
@@ -162,17 +162,19 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 				out_l, out_ab = g_model(x)
 				disc_out_fake = d_model(out_ab)
 				loss_l = criterion_ae(out_l, y_l)
-
+				# loss_ab_gen = 0.5 * torch.mean((torch.log(disc_out_fake) - torch.log(1 - disc_out_fake))**2)
 				loss_ab_gen = criterion_color(disc_out_fake, target_y)
 				loss_gen  =  0.5 * 	loss_l + loss_ab_gen
 				loss_gen.backward()
 				optimizer_ae.step()
 
-			value = 'Iter : %d Batch: %d D loss real: %.4f D Loss fake: %.4f AE loss: %.4f\n'%(i, j, loss_real.item(), loss_fake.item(), loss_l.item())
+			value = 'Iter : %d Batch: %d D loss real: %.4f D Loss fake: %.4f AE loss: %.4f GEN Color Loss: %.4f\n'%(i, j, loss_real.item(), loss_fake.item(), loss_l.item(), loss_ab_gen.item())
 			print(value)
 			summary_writer.add_scalar("D_real", loss_real.item())
 			summary_writer.add_scalar("D_fake", loss_fake.item())
 			summary_writer.add_scalar("AE loss", loss_l.item())
+			summary_writer.add_scalar('GEN AB Loss', loss_ab_gen.item())
+			summary_writer.add_scalar('Total GEN loss', loss_gen.item())
 			# log_value('D real', loss_real.item())
 			# log_value('D fake', loss_fake.item())
 			# log_value('AE loss', loss_l.item())
@@ -369,7 +371,7 @@ def main():
 	if args.learning_rate_color:
 		learning_rate_color = args.learning_rate_color
 	else:
-		learning_rate_color = 3e-3
+		learning_rate_color = 3e-2
 
 	batch_size_train = 5
 	batch_size_test = 5
