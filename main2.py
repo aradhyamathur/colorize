@@ -79,7 +79,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 50
+	test_iter = 100
 	if args.test_mode:
 		draw_iter = 1
 		all_save_iter = 1
@@ -102,10 +102,10 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 	criterion_ae = nn.MSELoss()
 	criterion_color = nn.BCELoss()
-	optimizer_ae = optim.Adam(g_model.parameters(), lr=learning_rate_ae)
-	optimizer_color = optim.Adam(d_model.parameters(), lr=learning_rate_color)
+	optimizer_g = optim.Adam(g_model.parameters(), lr=learning_rate_ae)
+	optimizer_d = optim.Adam(d_model.parameters(), lr=learning_rate_color)
 
-	save_model_info(g_model, d_model, cur_model_dir, start_epoch, end_epoch, learning_rate_ae, learning_rate_color, optimizer_ae, optimizer_color)
+	save_model_info(g_model, d_model, cur_model_dir, start_epoch, end_epoch, learning_rate_ae, learning_rate_color, optimizer_g, optimizer_d)
 
 	for i in range(start_epoch, end_epoch):
 		for j, (x, (y_l, y_ab)) in enumerate(train_dataloader):
@@ -115,51 +115,68 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 			g_model.train_stat = True
 			correct = 0
-			
+			x = x + torch.randn(x.shape)
 			x = x.to(device)
 			y_l = y_l.to(device)
 			y_ab = y_ab.to(device)
 
-			optimizer_ae.zero_grad()
-			optimizer_color.zero_grad()
+			optimizer_g.zero_grad()
+			optimizer_d.zero_grad()
 
-			target_y = torch.ones(len(y_ab)).to(device)
-			target_x = torch.zeros(len(y_ab)).to(device)
-			
-			disc_out_real = d_model(y_ab)
-			correct = torch.sum(torch.round(disc_out_real) == target_y).item()
-			loss_real = criterion_color(disc_out_real, target_y) 
-			loss_real.backward()
+			_, out_ab = g_model(x)
+			d_real = d_model(y_ab)
+			d_fake = d_model(out_ab)
+			d_loss = -(torch.mean(d_real) - torch.mean(d_fake))
+			d_loss.backward()
+
+			optimizer_d.step()
+
+			optimizer_d.zero_grad()
+			optimizer_g.zero_grad()
 
 			out_l, out_ab = g_model(x)
+			d_fake = d_model(out_ab)
+			loss_l = 1e-4 * criterion_ae(out_l, y_l)
+			g_loss = -torch.mean(d_fake)
+			loss_gen =  5.0 * g_loss + loss_l
 
-			disc_out_fake = d_model(out_ab.detach())
-			correct += torch.sum(torch.round(disc_out_fake) == target_x).item()
-			loss_fake = criterion_color(disc_out_fake, target_x) 
-			loss_fake.backward()
-			optimizer_color.step()
+			loss_gen.backward()
+			optimizer_g.step()
 
-			for k in range(1):
-				out_l, out_ab = g_model(x)
-				disc_out_fake = d_model(out_ab)
-				loss_l = criterion_ae(out_l, y_l)
-				# loss_ab_gen = 0.5 * torch.mean((torch.log(disc_out_fake) - torch.log(1 - disc_out_fake))**2)
-				loss_ab_gen = criterion_color(disc_out_fake, target_y)
-				loss_gen  =  0.5 * 	loss_l + loss_ab_gen
-				loss_gen.backward()
-				optimizer_ae.step()
+#####################################################################################################
+			# target_y = torch.ones(len(y_ab)).to(device)
+			# target_x = torch.zeros(len(y_ab)).to(device)
+			
+			# disc_out_real = d_model(y_ab)
+			# correct = torch.sum(torch.round(disc_out_real) == target_y).item()
+			# loss_real = criterion_color(disc_out_real, target_y) 
+			# loss_real.backward()
 
-			value = 'Iter : %d Batch: %d D loss real: %.4f D Loss fake: %.4f AE loss: %.4f GEN Color Loss: %.4f\n'%(i, j, loss_real.item(), loss_fake.item(), loss_l.item(), loss_ab_gen.item())
+			# out_l, out_ab = g_model(x)
+
+			# disc_out_fake = d_model(out_ab.detach())
+			# correct += torch.sum(torch.round(disc_out_fake) == target_x).item()
+			# loss_fake = criterion_color(disc_out_fake, target_x) 
+			# loss_fake.backward()
+			# optimizer_d.step()
+
+			# for k in range(1):
+			# 	out_l, out_ab = g_model(x)
+			# 	disc_out_fake = d_model(out_ab)
+			# 	loss_l = criterion_ae(out_l, y_l)
+			# 	# loss_ab_gen = 0.5 * torch.mean((torch.log(disc_out_fake) - torch.log(1 - disc_out_fake))**2)
+			# 	loss_ab_gen = criterion_color(disc_out_fake, target_y)
+			# 	loss_gen  =  0.5 * 	loss_l + loss_ab_gen
+			# 	loss_gen.backward()
+			# 	optimizer_g.step()
+####################################################################################################################
+			# value = 'Iter : %d Batch: %d D loss real: %.4f D Loss fake: %.4f AE loss: %.4f GEN Color Loss: %.4f\n'%(i, j, loss_real.item(), loss_fake.item(), loss_l.item(), loss_ab_gen.item())
+
+			value = 'Iter : %d Batch: %d D loss  %.4f AE loss: %.4f GEN Color Loss: %.4f G_loss %.4f\n'%(i, j, d_loss.item(), loss_l.item(), loss_gen.item(), g_loss.item())
 			print(value)
-			summary_writer.add_scalar("D_real", loss_real.item())
-			summary_writer.add_scalar("D_fake", loss_fake.item())
+			summary_writer.add_scalar("D loss", d_loss.item())
 			summary_writer.add_scalar("AE loss", loss_l.item())
-			summary_writer.add_scalar('GEN AB Loss', loss_ab_gen.item())
-			summary_writer.add_scalar('Total D loss', loss_real.item() + loss_fake.item())
-			summary_writer.add_scalar('Total GEN loss', loss_gen.item())
-			# log_value('D real', loss_real.item())
-			# log_value('D fake', loss_fake.item())
-			# log_value('AE loss', loss_l.item())
+			summary_writer.add_scalar('GEN  Loss', loss_gen.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
@@ -178,7 +195,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 				torch.save(g_model.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
 				print('SAVED CURRENT')
 
-			if j % test_iter == 0:
+			if j % test_iter == 0 and j != 0:
 				test_losses = test_model(g_model, test_dataloader, i, now, j)
 				avg_test_loss = np.average(test_losses)
 				summary_writer.add_scalar("Test loss", avg_test_loss)
