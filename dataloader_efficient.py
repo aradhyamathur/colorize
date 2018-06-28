@@ -30,10 +30,13 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     if color:
         image = cv2.imread(base_dir + '/' + image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        image = image.astype(np.uint8)
+        # print('color:', image.dtype)
+        # image = image.astype(np.int8)
         # image = image[:, :, 1:]  # keeping all the channels dropping the luminosity
     else:
-        image = cv2.imread(base_dir + '/' + image, 0).astype(np.uint8)
+        image = cv2.imread(base_dir + '/' + image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # print('gray : ', image.dtype)
 
 
     

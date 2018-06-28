@@ -28,7 +28,7 @@ class Encoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.xavier_uniform_(m.weight)
+				nn.init.xavier_normal_(m.weight)
 	
 	def forward(self, x):
 
@@ -77,7 +77,7 @@ class Decoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.xavier_uniform_(m.weight)
+				nn.init.xavier_normal_(m.weight)
 
 	def forward(self, x):
 
@@ -131,7 +131,7 @@ class ColorDecoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.xavier_uniform_(m.weight)
+				nn.init.xavier_normal_(m.weight)
 
 	def forward(self, x):
 
@@ -216,7 +216,7 @@ class Discriminator(nn.Module):
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
 				print('Initializing', m)
-				nn.init.xavier_uniform_(m.weight)
+				nn.init.xavier_normal_(m.weight)
 
 	def forward(self, x):
 

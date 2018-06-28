@@ -1,3 +1,5 @@
+# import matplotlib
+# matplotlib.use('Agg')
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -20,6 +22,7 @@ from tensorboard_logger import configure, log_value
 from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
+from utils import *
 
 
 configure("./log_dir/", flush_secs=5)
@@ -67,29 +70,6 @@ if not os.path.exists(RANDOM_OUTPUTS_DIR):
 
 
 
-def update_readings(filename, reading):
-	f = open(filename, 'a')
-	f.writelines(reading)
-	f.close() 
-
-def make_grid(color_img, colored_img, scan_img):
-	img_scan = np.stack((scan_img,)*3, axis=-1)
-	img_grid = np.concatenate((color_img, colored_img, img_scan), axis=1)
-	return img_grid
-
-def save_model_info(g_model, d_model, DIR, epoch_start, epoch_end, learning_rate_ae, learning_rate_color, optimizer_ae, optimizer_color):
-	f = open(DIR + "model_info.txt", 'a')
-	g_model_info = 'Color Generator : \n' + str(g_model) + '\n'
-	d_model_info = 'Color Discriminator : \n' + str(d_model) + '\n'
-	metrics = 'Epoch start : {} epoch end: {} learning_rate_ae : {} learning_rate_color: {} \n'.format(str(epoch_start), str(epoch_end), str(learning_rate_ae), str(learning_rate_color)) + '\n'
-	optimizer_ae_str = "AE optimizer: \n " + str(optimizer_ae.state_dict())  + '\n'
-	optimizer_color_str = "Color optimizer: \n " + str(optimizer_color.state_dict())  + '\n'
-	f.writelines(g_model_info)
-	f.writelines(d_model_info)
-	f.writelines(metrics)
-	f.writelines(optimizer_ae_str)
-	f.writelines(optimizer_color_str)
-	f.close()
 
 
 def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloader, test_dataloader, now):
@@ -158,6 +138,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			loss_fake = criterion_color(disc_out_fake, target_x) 
 			loss_fake.backward()
 			optimizer_color.step()
+
 			for k in range(1):
 				out_l, out_ab = g_model(x)
 				disc_out_fake = d_model(out_ab)
@@ -174,6 +155,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			summary_writer.add_scalar("D_fake", loss_fake.item())
 			summary_writer.add_scalar("AE loss", loss_l.item())
 			summary_writer.add_scalar('GEN AB Loss', loss_ab_gen.item())
+			summary_writer.add_scalar('Total D loss', loss_real.item() + loss_fake.item())
 			summary_writer.add_scalar('Total GEN loss', loss_gen.item())
 			# log_value('D real', loss_real.item())
 			# log_value('D fake', loss_fake.item())
@@ -215,6 +197,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 	model.eval()
 	model.train_stat = False
 	test_losses = []
+	diffs_avg = []
 	with torch.no_grad():
 		for i, (name, x, (y_l,y_ab)) in enumerate(test_loader):
 
@@ -240,19 +223,29 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 			image = inputs[j].squeeze(0).numpy()
 			# print(image.shape, a_channel.shape, b_channel.shape)
 
+			actual_color_image = plt.imread(args.data_path + COLOR_DIR + name[j])
+			true_ab = cv2.cvtColor(actual_color_image, cv2.COLOR_RGB2LAB)[:, :, 1:]
+
+
 			np_image = np.dstack((image, a_channel, b_channel))
 			np_rgb = cv2.cvtColor(np_image, cv2.COLOR_LAB2RGB)
+			
+			diffs = color_diff(np.dstack((a_channel, b_channel)),  true_ab, image)
+			# import ipdb; ipdb.set_trace()
+
 
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 			# exit()
 			
-			grid = make_grid(plt.imread(args.data_path + COLOR_DIR + name[j]), np_rgb, image)
+			grid = make_grid(actual_color_image, np_rgb, image)
 
 			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid)
 			
 
 			imsave(file_name, np_rgb)
 			cv2.imwrite(file_name.split('.png')[0] + '_mri.png', image)
+
+			diffs_avg.append(np.average(diffs))
 
 
 
@@ -267,6 +260,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 					break
 			if args.test_mode:
 				break
+		summary_writer.add_scalar('lab difference', np.average(diffs_avg))
 	return test_losses
 
 
@@ -289,7 +283,8 @@ def draw_outputs(epoch, model, now, dset_path, filenames, batch_idx):
 		base_dir = dset_path + SCAN_DIR + '/'
 		image_names = os.listdir(base_dir)
 		for i,  index in enumerate(indices):
-			image = cv2.imread(base_dir + filenames[index], 0)
+			image = cv2.imread(base_dir + filenames[index])
+			image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 			input_image = torch.from_numpy(image).float()
 			input_image = input_image.unsqueeze(0)
 			input_image = input_image.unsqueeze(0)
