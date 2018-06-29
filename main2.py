@@ -101,7 +101,6 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 	else:end_epoch = 100
 
 	criterion_ae = nn.MSELoss()
-	criterion_color = nn.BCELoss()
 	optimizer_g = optim.Adam(g_model.parameters(), lr=learning_rate_ae)
 	optimizer_d = optim.Adam(d_model.parameters(), lr=learning_rate_color)
 
@@ -112,9 +111,13 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 			g_model.train()
 			d_model.train()
-
+			
+			target_y = torch.ones(len(y_ab)).to(device)
+			target_x = torch.zeros(len(y_ab)).to(device)
+			
 			g_model.train_stat = True
 			correct = 0
+
 			x = x + torch.randn(x.shape)
 			x = x.to(device)
 			y_l = y_l.to(device)
@@ -126,7 +129,9 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			_, out_ab = g_model(x)
 			d_real = d_model(y_ab)
 			d_fake = d_model(out_ab)
-			d_loss = -(torch.mean(d_real) - torch.mean(d_fake))
+			d_loss_real = ab_criterion(d_real, target_y)
+			d_loss_fake = ab_criterion(d_fake, target_x)
+			d_loss = d_loss_fake + d_loss_real
 			d_loss.backward()
 
 			optimizer_d.step()
@@ -137,7 +142,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			out_l, out_ab = g_model(x)
 			d_fake = d_model(out_ab)
 			loss_l = 1e-4 * criterion_ae(out_l, y_l)
-			g_loss = -torch.mean(d_fake)
+			g_loss = ab_criterion(d_fake, target_y)
 			loss_gen =  5.0 * g_loss + loss_l
 
 			loss_gen.backward()
