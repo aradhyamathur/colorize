@@ -3,6 +3,7 @@ import numpy as np
 from colormath.color_objects import LabColor
 from colormath.color_diff import delta_e_cie2000
 import cv2
+from skimage.io import imsave
 import matplotlib.pyplot as plt
 # import matplotlib.pyplot as plt
 # matplotlib.pyplot.ion()
@@ -13,13 +14,11 @@ def update_readings(filename, reading):
 	f.close() 
 
 def make_grid(color_img, colored_img, scan_img):
-	# img_scan = np.stack((scan_img,)*3, axis=-1)
-	img_scan = cv2.cvtColor(scan_img, cv2.COLOR_GRAY2RGB)
-	img_grid = np.concatenate((color_img, colored_img, img_scan), axis=1)
-	# plt.imshow(scan_img)
-	# plt.show()
-	# import ipdb; ipdb.set_trace()
-	
+
+	scan_img  = scan_img / 255.0
+	print(scan_img.dtype)
+
+	img_grid = np.concatenate((color_img, colored_img, scan_img ), axis=1)
 	return img_grid
 
 def save_model_info(g_model, d_model, DIR, epoch_start, epoch_end, learning_rate_ae, learning_rate_color, optimizer_ae, optimizer_color):
