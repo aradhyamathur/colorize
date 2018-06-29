@@ -25,15 +25,6 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 
 
-configure("./log_dir/", flush_secs=5)
-
-np.set_printoptions(threshold=np.nan)
-
-# rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-# resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
-
-
-summary_writer = SummaryWriter("./log_dir/")
 
 
 
@@ -58,6 +49,13 @@ args = parser.parse_args()
 if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
 
+
+LOG_DIR = './log_dir/'
+
+np.set_printoptions(threshold=np.nan)
+
+summary_writer = None 
+
 device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SAVED_MODEL_DIR = './trained_models/'
 RANDOM_OUTPUTS_DIR = './rand_outputs/'
@@ -68,14 +66,15 @@ if not os.path.exists(SAVED_MODEL_DIR):
 if not os.path.exists(RANDOM_OUTPUTS_DIR):
 	os.makedirs(RANDOM_OUTPUTS_DIR)
 
-
+if not os.path.exists(LOG_DIR):
+	os.makedirs(LOG_DIR)
 
 
 
 def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloader, test_dataloader, now):
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
-
+	global summary_writer
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
@@ -141,7 +140,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 			out_l, out_ab = g_model(x)
 			d_fake = d_model(out_ab)
-			loss_l = 1e-4 * criterion_ae(out_l, y_l)
+			loss_l = 1e-5 * criterion_ae(out_l, y_l)
 			g_loss = ab_criterion(d_fake, target_y)
 			loss_gen =  5.0 * g_loss + loss_l
 
@@ -200,7 +199,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 				torch.save(g_model.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
 				print('SAVED CURRENT')
 
-			if j % test_iter == 0 and j != 0:
+			if (j % test_iter == 0 and j != 0) or args.test_mode:
 				test_losses = test_model(g_model, test_dataloader, i, now, j)
 				avg_test_loss = np.average(test_losses)
 				summary_writer.add_scalar("Test loss", avg_test_loss)
@@ -214,6 +213,9 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			break
 
 def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
+
+	global summary_writer
+
 	if not os.path.exists(EVAL_DIR + now):
 		os.makedirs(EVAL_DIR + now)
 	model.eval()
@@ -258,14 +260,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 			# exit()
-			
-			grid = make_grid(actual_color_image, np_rgb, image)
+			image_scan = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+			grid = make_grid(actual_color_image, np_rgb, image_scan)
 
 			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid)
 			
 
 			imsave(file_name, np_rgb)
-			cv2.imwrite(file_name.split('.png')[0] + '_mri.png', image)
+			# cv2.imwrite(file_name.split('.png')[0] + '_mri.png', image)
 
 			diffs_avg.append(np.average(diffs))
 
@@ -287,6 +289,9 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 
 
 def draw_outputs(epoch, model, now, dset_path, filenames, batch_idx):
+
+	global summary_writer
+
 	if not os.path.exists(RANDOM_OUTPUTS_DIR+now):
 		os.makedirs(RANDOM_OUTPUTS_DIR+now)
 	file = open(RANDOM_OUTPUTS_DIR + now + '/order.txt', 'a')
@@ -306,32 +311,28 @@ def draw_outputs(epoch, model, now, dset_path, filenames, batch_idx):
 		image_names = os.listdir(base_dir)
 		for i,  index in enumerate(indices):
 			image = cv2.imread(base_dir + filenames[index])
-			image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-			input_image = torch.from_numpy(image).float()
+			image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+			image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+			
+			input_image = torch.from_numpy(image_gray).float()
 			input_image = input_image.unsqueeze(0)
 			input_image = input_image.unsqueeze(0)
 			input_image = input_image.to(device)
+			
 			output = model(input_image)
-			# print(output.shape)
-			# import ipdb;ipdb.set_trace()
 			output = output.squeeze(0).permute(1, 2, 0)
-			# output = output[1].squeeze(0).permute(1, 2, 0) # if datalparallel
-			# print(output.shape)
+
 
 			np_image = output.cpu().numpy()
-			# print(np_image.shape)
 	
 			a_channel = np_image[:, :,  0]
 			b_channel = np_image[:, :,  1] 
-			
-			# print('a', a_channel)
-			# print('b', b_channel)
 
-			
-			img_composed = np.dstack((image, a_channel, b_channel))
+			img_composed = np.dstack((image_gray, a_channel, b_channel))
 			img_rgb = cv2.cvtColor(img_composed, cv2.COLOR_LAB2RGB)
-			
-			grid = make_grid(plt.imread(args.data_path + COLOR_DIR + filenames[index]) , img_rgb, image)
+			color_img = plt.imread(args.data_path + COLOR_DIR + filenames[index])
+			grid = make_grid( color_img, img_rgb, image)
 			summary_writer.add_image("random image/" + 'cimg_'+ str(epoch) + '_'+ str(batch_idx)+ '_' + str(i) + '_' + filenames[index], grid)
 			file_name = (RANDOM_OUTPUTS_DIR + now + '/' +  'cimg_'+ str(epoch) + '_' + str(batch_idx)+ '_' + str(i) + '_' + filenames[index]).strip()
 
@@ -354,9 +355,13 @@ def draw_outputs(epoch, model, now, dset_path, filenames, batch_idx):
 
 
 def main():
+	global summary_writer
+	
 	now = str(datetime.datetime.now()) + '/'
 	cur_model_dir = SAVED_MODEL_DIR + now
 	os.makedirs(cur_model_dir)
+
+	summary_writer = SummaryWriter(LOG_DIR + now)
 
 	if args.reset_files and (args.reset_files == 'False'):
 		reset = False
@@ -388,7 +393,7 @@ def main():
 	if args.learning_rate_color:
 		learning_rate_color = args.learning_rate_color
 	else:
-		learning_rate_color = 3e-2
+		learning_rate_color = 3e-3
 
 	batch_size_train = 5
 	batch_size_test = 5

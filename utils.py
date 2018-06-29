@@ -16,7 +16,6 @@ def update_readings(filename, reading):
 def make_grid(color_img, colored_img, scan_img):
 
 	scan_img  = scan_img / 255.0
-	print(scan_img.dtype)
 
 	img_grid = np.concatenate((color_img, colored_img, scan_img ), axis=1)
 	return img_grid
