@@ -140,7 +140,7 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 			out_l, out_ab = g_model(x)
 			d_fake = d_model(out_ab)
-			loss_l = 1e-5 * criterion_ae(out_l, y_l)
+			loss_l = 1e-4 * criterion_ae(out_l, y_l)
 			g_loss = ab_criterion(d_fake, target_y)
 			loss_gen =  5.0 * g_loss + loss_l
 
@@ -393,7 +393,7 @@ def main():
 	if args.learning_rate_color:
 		learning_rate_color = args.learning_rate_color
 	else:
-		learning_rate_color = 3e-3
+		learning_rate_color = 3e-2
 
 	batch_size_train = 5
 	batch_size_test = 5
