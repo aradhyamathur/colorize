@@ -13,25 +13,21 @@ def update_readings(filename, reading):
 	f.writelines(reading)
 	f.close() 
 
-def make_grid(color_img, colored_img, scan_img):
+def make_grid(gray_img, ae_img):
 
-	scan_img  = scan_img / 255.0
+	# scan_img  = scan_img / 255.0
 
-	img_grid = np.concatenate((color_img, colored_img, scan_img ), axis=1)
+	img_grid = np.concatenate((gray_img, ae_img), axis=1)
 	return img_grid
 
-def save_model_info(g_model, d_model, DIR, epoch_start, epoch_end, learning_rate_ae, learning_rate_color, optimizer_ae, optimizer_color):
+def save_model_info(model, DIR, epoch_start, epoch_end, learning_rate_ae, optimizer_ae):
 	f = open(DIR + "model_info.txt", 'a')
-	g_model_info = 'Color Generator : \n' + str(g_model) + '\n'
-	d_model_info = 'Color Discriminator : \n' + str(d_model) + '\n'
-	metrics = 'Epoch start : {} epoch end: {} learning_rate_ae : {} learning_rate_color: {} \n'.format(str(epoch_start), str(epoch_end), str(learning_rate_ae), str(learning_rate_color)) + '\n'
+	model_info = 'AE : \n' + str(model) + '\n'
+	metrics = 'Epoch start : {} epoch end: {} learning_rate_ae : {}\n'.format(str(epoch_start), str(epoch_end), str(learning_rate_ae)) + '\n'
 	optimizer_ae_str = "AE optimizer: \n " + str(optimizer_ae.state_dict())  + '\n'
-	optimizer_color_str = "Color optimizer: \n " + str(optimizer_color.state_dict())  + '\n'
-	f.writelines(g_model_info)
-	f.writelines(d_model_info)
+	f.writelines(model_info)
 	f.writelines(metrics)
 	f.writelines(optimizer_ae_str)
-	f.writelines(optimizer_color_str)
 	f.close()
 
 

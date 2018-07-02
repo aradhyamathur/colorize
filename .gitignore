@@ -4,3 +4,7 @@ log_dir/
 __pycache__/
 trained_models/
 old_tfboard/
+ae_log_dir/
+ae_test_outputs/
+ae_trained_models/
+

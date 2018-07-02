@@ -241,33 +241,100 @@ class Discriminator(nn.Module):
 		out = F.sigmoid(self.linear3(out))
 		return out
 
+class ColorDecoderConvTrans(nn.Module):
+
+    def __init__(self, out_channels=1):
+
+        super(ColorDecoderConvTrans, self).__init__()
+        self.upsample1 = nn.Upsample(scale_factor=4)
+        self.upsample2 = nn.Upsample(scale_factor=2)
+
+        self.conv1 = nn.ConvTranspose2d(2048, 1024, 3, padding=1, stride=2, output_padding=1)
+        self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+        self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv5 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+        self.conv6 = nn.Conv2d(256, 128, 3, padding=1)
+        self.conv7 = nn.Conv2d(128, out_channels, 3, padding=1)
+
+        self.bn1 = nn.BatchNorm2d(1024)
+        self.bn2 = nn.BatchNorm2d(512)
+        self.bn3 = nn.BatchNorm2d(256)
+        self.bn4 = nn.BatchNorm2d(512)
+        self.bn5 = nn.BatchNorm2d(256)
+        self.bn6 = nn.BatchNorm2d(128)
+
+
+        for m in self.modules():
+            if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+                print('Initializing', m)
+                nn.init.xavier_normal_(m.weight)
+
+    def forward(self, x):
+        print(x.shape)
+        #print('DECODER')
+        out = self.bn1(F.relu(self.conv1(x)))
+        #print('Conv1 : ', out.shape)
+
+        # out = self.upsample1(out)
+
+        out = self.bn2(F.relu(self.conv2(out)))
+        #print('Conv2: ', out.shape)
+
+        # out = self.upsample2(out)
+
+        out = self.bn3(F.relu(self.conv3(out)))
+        #print('Conv3: ', out.shape)
+
+        out = self.bn4(F.relu(self.conv4(out)))
+
+        out = self.bn5(F.relu(self.conv5(out)))
+
+        out = self.bn6(F.relu(self.conv6(out)))
+
+        out = F.relu(self.conv7(out))
+        #print('Conv4: ',  out.shape)
+
+        return out
+
+
+class AutoEncoder(nn.Module):
+    """
+        Autoencoder
+    """
+
+    def __init__(self, train=True):
+        super(AutoEncoder, self).__init__()
+        self.encoder = Encoder()
+        self.decoder = ColorDecoderConvTrans(out_channels=1)
+
+    def forward(self, x):
+        out = self.encoder(x)
+        print(out.shape)
+        out = self.decoder(out)
+        print(out.shape)
+        return out
+
+
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def test_net():
 	CUDA = torch.cuda.is_available()
-	generator = Generator()
-	discriminator = Discriminator(128)
+	autoencoder = AutoEncoder()
 
-	print('Generator Params', count_parameters(generator))
-	print('Discriminator Params', count_parameters(discriminator))
+	print('Autoencoder Params', count_parameters(autoencoder))
 	tensor = torch.randn(5, 1, 128, 128)
 	
 	if CUDA :
-		generator = generator.cuda()
-		discriminator = discriminator.cuda()
+		autoencoder = autoencoder.cuda()
 		tensor = tensor.cuda()
 		# val = input()
 	 
-	out_l, out_ab = generator(tensor)
+	out_l = autoencoder(tensor)
 	
 	print(out_l.shape)
-	print(out_ab.shape)
-
-	disc_out = discriminator(out_ab)
-
-	print(disc_out.shape)
 
 if __name__ == '__main__':
 	test_net()
