@@ -315,6 +315,23 @@ class AutoEncoder(nn.Module):
         # print(out.shape)
         return out
 
+class ColorEncoder(nn.Module):
+    """
+        Autoencoder
+    """
+
+    def __init__(self, train=True):
+        super(ColorEncoder, self).__init__()
+        self.encoder = Encoder()
+        self.decoder = ColorDecoderConvTrans(out_channels=2)
+
+    def forward(self, x):
+        out = self.encoder(x)
+        # print(out.shape)
+        out = self.decoder(out)
+        # print(out.shape)
+        return out
+
 
 
 def count_parameters(model):
@@ -322,17 +339,17 @@ def count_parameters(model):
 
 def test_net():
 	CUDA = torch.cuda.is_available()
-	autoencoder = AutoEncoder()
+	colorencoder = 	ColorEncoder()
 
-	print('Autoencoder Params', count_parameters(autoencoder))
+	print('Autoencoder Params', count_parameters(colorencoder))
 	tensor = torch.randn(5, 1, 128, 128)
 	
 	if CUDA :
-		autoencoder = autoencoder.cuda()
+		colorencoder = colorencoder.cuda()
 		tensor = tensor.cuda()
 		# val = input()
 	 
-	out_l = autoencoder(tensor)
+	out_l = colorencoder(tensor)
 	
 	print(out_l.shape)
 

@@ -13,12 +13,11 @@ def update_readings(filename, reading):
 	f.writelines(reading)
 	f.close() 
 
-def make_grid(gray_img, ae_img):
+def make_grid(color_img, colored_image, image):
 
-	# scan_img  = scan_img / 255.0
-	# gray_img = gray_img / 255.0
-	# ae_img = ae_img / 255.0
-	img_grid = np.concatenate((gray_img, ae_img), axis=1)
+	image = image / 255.0
+	image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+	img_grid = np.concatenate((color_img, colored_image, image), axis=1)
 	return img_grid
 
 def save_model_info(model, DIR, epoch_start, epoch_end, learning_rate_ae, optimizer_ae):
