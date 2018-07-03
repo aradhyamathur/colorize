@@ -105,6 +105,8 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 
 	save_model_info(g_model, d_model, cur_model_dir, start_epoch, end_epoch, learning_rate_ae, learning_rate_color, optimizer_g, optimizer_d)
 
+	d_prev = 0.0
+	d_iter = 1
 	for i in range(start_epoch, end_epoch):
 		for j, (x, (y_l, y_ab)) in enumerate(train_dataloader):
 
@@ -116,7 +118,15 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			
 			g_model.train_stat = True
 			correct = 0
-
+			d_iter = 1
+			
+			if d_prev > 10.0:
+				d_iter = 3
+			elif d_prev > 20.0:
+				d_iter = 5
+			else:
+				d_iter = 1
+			
 			x = x + torch.randn(x.shape)
 			x = x.to(device)
 			y_l = y_l.to(device)
@@ -125,18 +135,20 @@ def train(g_model, d_model, learning_rate_ae, learning_rate_color, train_dataloa
 			optimizer_g.zero_grad()
 			optimizer_d.zero_grad()
 
-			_, out_ab = g_model(x)
-			d_real = d_model(y_ab)
-			d_fake = d_model(out_ab)
-			d_loss_real = ab_criterion(d_real, target_y)
-			d_loss_fake = ab_criterion(d_fake, target_x)
-			d_loss = d_loss_fake + d_loss_real
-			d_loss.backward()
+			for k in range(d_iter):
+				_, out_ab = g_model(x)
+				d_real = d_model(y_ab)
+				d_fake = d_model(out_ab.detach())
+				d_loss_real = ab_criterion(d_real, target_y)
+				d_loss_fake = ab_criterion(d_fake, target_x)
+				d_loss = d_loss_fake + d_loss_real
+				d_loss.backward()
 
-			optimizer_d.step()
+				optimizer_d.step()
+				optimizer_d.zero_grad()
+				optimizer_g.zero_grad()
 
-			optimizer_d.zero_grad()
-			optimizer_g.zero_grad()
+			d_prev = d_loss.item()
 
 			out_l, out_ab = g_model(x)
 			d_fake = d_model(out_ab)
