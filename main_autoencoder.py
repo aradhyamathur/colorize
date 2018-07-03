@@ -131,7 +131,7 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 				print('..SAVING MODEL')
 				torch.save(model.state_dict(), cur_model_dir + 'colorize2ae_' + str(i) + '.pt')
 				print('AE SAVED')
-				print('..SAVING MODEL')
+				print('..SAVED MODEL')
 
 			if j % cur_save_iter == 0:
 				print('SAVING MODEL')
@@ -189,14 +189,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 
 			if args.test_mode:
 				plt.imshow(grid, cmap='gray'); plt.show()
-				print(grid.shape)
+				# print(grid.shape)
 
-			grid = cv2.cvtColor(grid, cv2.COLOR_GRAY2RGB)
-			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid)
+			grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
+			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
 			# exit()
 			
-			grid = grid / 255.0 
-			imsave(file_name, grid)
+			cv2.imwrite(file_name, grid)
+			# imsave(file_name, grid)
 
 			with open(EVAL_DIR+now+'/order.txt', 'a') as f:
 				val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
@@ -265,7 +265,7 @@ def main():
 
 	if args.load_prev_model_ae:
 		autoencoder.load_state_dict(torch.load(args.load_prev_model_ae))
-		print('Discriminator loaded successfully')
+		print('AE loaded successfully')
 
 
 	autoencoder = autoencoder.to(device)

@@ -271,7 +271,7 @@ class ColorDecoderConvTrans(nn.Module):
                 nn.init.xavier_normal_(m.weight)
 
     def forward(self, x):
-        print(x.shape)
+        # print(x.shape)
         #print('DECODER')
         out = self.bn1(F.relu(self.conv1(x)))
         #print('Conv1 : ', out.shape)
@@ -310,9 +310,9 @@ class AutoEncoder(nn.Module):
 
     def forward(self, x):
         out = self.encoder(x)
-        print(out.shape)
+        # print(out.shape)
         out = self.decoder(out)
-        print(out.shape)
+        # print(out.shape)
         return out
 
 
