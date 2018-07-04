@@ -420,7 +420,7 @@ class ColorEncoder(nn.Module):
 
     def __init__(self, train=True):
         super(ColorEncoder, self).__init__()
-        self.encoder = Encoder()
+        self.encoder = CEncoder()
         self.decoder = ColorDecoderConvTrans(out_channels=2)
 
     def forward(self, x):
