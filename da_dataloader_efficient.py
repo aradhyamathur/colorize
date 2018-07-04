@@ -63,12 +63,12 @@ class EfficientImageDataSet(Dataset):
     def __getitem__(self, index):
         img_name = self.X[index]
         
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, False)).float()
+        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, False) / 255.0 * 100).float()  ## rescaled to 0-100
         x_processed = x_processed.unsqueeze(0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
-        y_processed_l = y_processed[:,:,0]
+        y_processed_l = y_processed[:,:,0] / 255.0 * 100           ##    rescaled to 0-100
         y_processed_ab  = y_processed[:, :, 1:]
         y_processed_l = y_processed_l.unsqueeze(0)
         y_processed_ab = y_processed_ab.permute(2, 1, 0)
@@ -94,12 +94,12 @@ class EfficientImageDataTestSet(Dataset):
     def __getitem__(self, index):
         img_name = self.X[index]
         
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, False)).float()
+        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, False) / 255.0 * 100).float()    ## rescaled to 0-100
         x_processed = x_processed.unsqueeze(0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
-        y_processed_l = y_processed[:,:,0]
+        y_processed_l = y_processed[:,:,0] / 255.0 * 100               ##   rescaled to 0-100
         y_processed_ab  = y_processed[:, :, 1:]
         y_processed_l = y_processed_l.unsqueeze(0)
         y_processed_ab = y_processed_ab.permute(2, 1, 0)

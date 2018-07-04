@@ -57,6 +57,104 @@ class Encoder(nn.Module):
 		
 		return out
 
+class CEncoder(nn.Module):
+
+	def __init__(self):
+
+		super(CEncoder, self).__init__()
+		self.conv1 = nn.Conv2d(1, 1024, 3, padding=1, stride=2)
+		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv3 = nn.Conv2d(512, 256, 3, padding=1)
+		self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1)  
+		self.conv6 = nn.Conv2d(1024, 1024, 3, padding=1, stride=2)
+		self.conv7 = nn.Conv2d(1024, 2048, 3, padding=1, stride=2)
+		self.bn1 = nn.BatchNorm2d(1024)
+		self.bn2 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(256)
+		self.bn4 = nn.BatchNorm2d(512)
+		self.bn5 = nn.BatchNorm2d(1024)
+		self.bn6 = nn.BatchNorm2d(1024)
+		self.bn7 = nn.BatchNorm2d(2048)
+
+
+
+		for m in self.modules():
+			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+				print('Initializing', m)
+				nn.init.xavier_normal_(m.weight)
+	
+	def forward(self, x):
+
+		#print('ENCODER')
+
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
+
+		#print('Conv1:', out.shape)
+
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
+
+		#print('Conv2: ', out.shape)
+
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
+
+		#print('Conv3: ', out.shape)
+
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
+
+		#print('Conv4: ', out.shape)
+		out = self.bn5(F.leaky_relu(self.conv5(out)))
+
+		out = self.bn6(F.leaky_relu(self.conv6(out)))
+		
+		out = self.bn7(F.leaky_relu(self.conv7(out)))
+		
+		return out
+
+class CDecoder(nn.Module):
+
+	def __init__(self, out_channels=1):
+
+		super(CDecoder, self).__init__()
+		self.upsample1 = nn.Upsample(scale_factor=4)
+		self.upsample2 = nn.Upsample(scale_factor=2)
+
+		self.conv1 = nn.Conv2d(2048, 512, 3, padding=1)
+		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		self.conv3 = nn.Conv2d(512, 1024, 3, padding=1)
+		self.conv4 = nn.Conv2d(1024, out_channels, 3, padding=1)
+		self.bn1 = nn.BatchNorm2d(512)
+		self.bn2 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(1024)
+
+		for m in self.modules():
+			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+				print('Initializing', m)
+				nn.init.xavier_normal_(m.weight)
+
+	def forward(self, x):
+
+		#print('DECODER')
+
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
+		#print('Conv1 : ', out.shape)
+
+		out = self.upsample1(out)
+
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		#print('Conv2: ', out.shape)
+
+		out = self.upsample2(out)
+
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
+		#print('Conv3: ', out.shape)
+
+		out = F.leaky_relu(self.conv4(out))
+
+
+		#print('Conv4: ',  out.shape)
+
+		return out
 
 class Decoder(nn.Module):
 
@@ -273,26 +371,26 @@ class ColorDecoderConvTrans(nn.Module):
     def forward(self, x):
         # print(x.shape)
         #print('DECODER')
-        out = self.bn1(F.relu(self.conv1(x)))
+        out = self.bn1(F.leaky_relu(self.conv1(x)))
         #print('Conv1 : ', out.shape)
 
         # out = self.upsample1(out)
 
-        out = self.bn2(F.relu(self.conv2(out)))
+        out = self.bn2(F.leaky_relu(self.conv2(out)))
         #print('Conv2: ', out.shape)
 
         # out = self.upsample2(out)
 
-        out = self.bn3(F.relu(self.conv3(out)))
+        out = self.bn3(F.leaky_relu(self.conv3(out)))
         #print('Conv3: ', out.shape)
 
-        out = self.bn4(F.relu(self.conv4(out)))
+        out = self.bn4(F.leaky_relu(self.conv4(out)))
 
-        out = self.bn5(F.relu(self.conv5(out)))
+        out = self.bn5(F.leaky_relu(self.conv5(out)))
 
-        out = self.bn6(F.relu(self.conv6(out)))
+        out = self.bn6(F.leaky_relu(self.conv6(out)))
 
-        out = F.relu(self.conv7(out))
+        out = F.leaky_relu(self.conv7(out))
         #print('Conv4: ',  out.shape)
 
         return out
@@ -305,7 +403,7 @@ class AutoEncoder(nn.Module):
 
     def __init__(self, train=True):
         super(AutoEncoder, self).__init__()
-        self.encoder = Encoder()
+        self.encoder = CEncoder()
         self.decoder = ColorDecoderConvTrans(out_channels=1)
 
     def forward(self, x):
