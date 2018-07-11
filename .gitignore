@@ -7,4 +7,7 @@ old_tfboard/
 ae_log_dir/
 ae_test_outputs/
 ae_trained_models/
-
+da_log_dir/
+da_test_outputs/
+da_rand_outputs/
+da_trained_models/

@@ -12,3 +12,10 @@ test_ae:
 run_ae:
 	python main_autoencoder.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128
 	# python main_autoencoder.py --data_path ../color_my_pytorch_slices/data/slices --image_dim 128
+
+test_edge:
+	python main_edge_detect.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --test_mode True
+	
+
+run_edge:
+	python main_edge_detect.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128
