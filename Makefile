@@ -19,3 +19,6 @@ test_edge:
 
 run_edge:
 	python main_edge_detect.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128
+
+test_edge_detect:
+	python edge_detect_conv.py

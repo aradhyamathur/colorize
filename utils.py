@@ -14,7 +14,8 @@ def update_readings(filename, reading):
 	f.close() 
 
 def make_grid(gray_img, ae_img, edge_img):
-	print(gray_img.shape, ae_img.shape, edge_img.shape)
+
+	# print(gray_img.shape, ae_img.shape, edge_img.shape)
 	# scan_img  = scan_img / 255.0
 	# gray_img = gray_img / 255.0
 	# ae_img = ae_img / 255.0

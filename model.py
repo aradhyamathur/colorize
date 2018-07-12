@@ -308,15 +308,19 @@ class AutoEncoder(nn.Module):
         self.encoder = Encoder()
         self.decoder = ColorDecoderConvTrans(out_channels=1)
 
+
+
+
     def forward(self, x):
         out = self.encoder(x)
         # print(out.shape)
         out = self.decoder(out)
         # print(out.shape)
+        # out = self.edge(out)
         return out
 
 class Edge(nn.Module):
-	def __init__(self, cuda=False):
+	def __init__(self, cuda=True):
 		super(Edge, self).__init__()
 		self.x_filter = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
 		self.y_filter = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
@@ -324,8 +328,8 @@ class Edge(nn.Module):
 		self.convy = nn.Conv2d(1, 1, kernel_size=3 , stride=1, padding=1, bias=False)
 		self.weights_x = torch.from_numpy(self.x_filter).float().unsqueeze(0).unsqueeze(0)
 		self.weights_y = torch.from_numpy(self.y_filter).float().unsqueeze(0).unsqueeze(0)
-		
-		if cuda:
+		self.cuda = cuda
+		if self.cuda:
 			self.weights_x = self.weights_x.cuda()
 			self.weights_y = self.weights_y.cuda()
 
@@ -339,8 +343,11 @@ class Edge(nn.Module):
 	def forward(self, x):
 		g_x = self.convx(x)
 		g_y = self.convy(x)
-		g = torch.sqrt(torch.pow(g_x, 2) + torch.pow(g_y, 2))
-		return g
+		self.g = torch.sqrt(torch.pow(g_x, 2) + torch.pow(g_y, 2))
+		print(self.g.requires_grad)
+		# self.g.requires_grad = True
+		# self.g.register_hook(print)
+		return self.g
 
 
 def count_parameters(model):

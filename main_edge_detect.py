@@ -95,10 +95,11 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 	if args.end_epoch:
 		end_epoch = args.end_epoch
 	else:end_epoch = 100
+	
+	edge_detector = Edge(torch.cuda.is_available())
 
 	criterion_ae = nn.MSELoss()
-	optimizer = optim.Adam(model.parameters(), lr=learning_rate_ae)
-	edge_detector = Edge(torch.cuda.is_available())
+	optimizer = optim.Adam(list(filter(lambda p: p.requires_grad,edge_detector.parameters())) + list(model.parameters()), lr=learning_rate_ae)
 	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_ae, optimizer)
 
 	for i in range(start_epoch, end_epoch):
@@ -109,18 +110,29 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			
 			x = x + torch.randn(x.shape)
 			x = x.to(device)
-			x_edges = edge_detector(x)
-			y_l = y_l.to(device)
+
+			with torch.no_grad():
+				x_edges = edge_detector(x)
+			
+			# y_l = y_l.to(device)
 
 			# y_ab = y_ab.to(device)
 
 			optimizer.zero_grad()
 
 			out = model(x)
-			out_edge = edge_detector(out)
+			
+			## out.requires_grad = True
+			out_edge = edge_detector(model(x))
+
+
+			if args.test_mode:
+				print(out_edge)
 			loss = criterion_ae(out_edge, x_edges)
+			
 			loss.backward()
 			optimizer.step()
+			
 
 			value = 'Iter : %d Batch: %d AE loss: %.4f \n'%(i, j, loss.item())
 			print(value)
@@ -165,17 +177,19 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 	model.train_stat = False
 	test_losses = []
 	diffs_avg = []
-	edge_detector = Edge()
+	edge_detector = Edge(False)
+
 	with torch.no_grad():
 		for i, (name, x, (y_l,_)) in enumerate(test_loader):
 
 			x = x.to(device)
 			y_l = y_l.to(device)
-
+			with torch.no_grad():
+				x_in = edge_detector(x.cpu()) 
+			inputs_edge = x_in.cpu()
 			inputs = x.cpu()
-
-			out = model(x)
-			loss = F.mse_loss(out, y_l)
+			out = edge_detector(model(x).cpu())
+			loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
 			test_losses.append(loss.item())
@@ -183,27 +197,22 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 			out = out.squeeze(1)
 			output = out.cpu().numpy()
 			j = random.randint(0, len(output) - 1)
+			image_edge = inputs_edge[j].squeeze(0).numpy()
 			image = inputs[j].squeeze(0).numpy()
-			print(out.unsqueeze(0).shape)
-			out_edge = edge_detector(out.unsqueeze(1).cpu())
-			out_edge_disp = out_edge[j].squeeze(0).numpy()
-			# out_edge_disp = cv2.cvtColor(out_edge_disp, cv2.COLOR_GRAY2RGB)
+
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 				
 			
-			grid = make_grid(image, output[j], out_edge_disp)
+			grid = make_grid(image, output[j], image_edge)
 
 			if args.test_mode:
 				print('show image')
 				plt.imshow(grid, cmap='gray'); plt.show()
-				# print(grid.shape)
 
 			grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
 			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
-			# exit()
 			
 			cv2.imwrite(file_name, grid)
-			# imsave(file_name, grid)
 
 			with open(EVAL_DIR+now+'/order.txt', 'a') as f:
 				val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
@@ -253,7 +262,7 @@ def main():
 	if args.learning_rate_ae:
 		learning_rate_ae = args.learning_rate_ae
 	else:
-		learning_rate_ae = 4e-3
+		learning_rate_ae = 5e-5
 	
 
 	batch_size_train = 5

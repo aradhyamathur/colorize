@@ -36,6 +36,8 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     else:
         image = cv2.imread(base_dir + '/' + image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+
         # print('gray : ', image.dtype)
 
 

@@ -11,3 +11,7 @@ da_log_dir/
 da_test_outputs/
 da_rand_outputs/
 da_trained_models/
+edge_log_dir/
+edge_test_outputs/
+edge_rand_outputs/
+edge_trained_models/
