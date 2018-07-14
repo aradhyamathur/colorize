@@ -8,7 +8,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Edge
+from model import AutoEncoder, Edge, edge_loss
 from ae_dataloader_efficient import *
 import datetime
 from itertools import cycle
@@ -85,8 +85,6 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 	cur_model_dir = SAVED_MODEL_DIR + now + '/'
 	filenames = os.listdir(args.data_path + COLOR_DIR)
 
-	l_criteron = nn.MSELoss()
-	
 
 	if args.start_epoch:
 		start_epoch = args.start_epoch
@@ -111,8 +109,8 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			x = x + torch.randn(x.shape)
 			x = x.to(device)
 
-			with torch.no_grad():
-				x_edges = edge_detector(x)
+			# with torch.no_grad():
+			# 	x_edges = edge_detector(x)
 			
 			# y_l = y_l.to(device)
 
@@ -126,10 +124,11 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			out_edge = edge_detector(model(x))
 
 
-			if args.test_mode:
-				print(out_edge)
-			loss = criterion_ae(out_edge, x_edges)
-			
+			# if args.test_mode:
+				# print(out_edge)
+			# loss = criterion_ae(out_edge, x_edges)
+
+			loss = edge_loss(out, x)
 			loss.backward()
 			optimizer.step()
 			
@@ -188,8 +187,10 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 				x_in = edge_detector(x.cpu()) 
 			inputs_edge = x_in.cpu()
 			inputs = x.cpu()
-			out = edge_detector(model(x).cpu())
-			loss = F.mse_loss(out, x_in)
+			# out = edge_detector(model(x).cpu())
+			out = model(x)
+			loss = edge_loss(out, x)
+			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
 			test_losses.append(loss.item())
@@ -262,10 +263,10 @@ def main():
 	if args.learning_rate_ae:
 		learning_rate_ae = args.learning_rate_ae
 	else:
-		learning_rate_ae = 5e-5
+		learning_rate_ae = 5e-3
 	
 
-	batch_size_train = 5
+	batch_size_train = 10
 	batch_size_test = 5
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train

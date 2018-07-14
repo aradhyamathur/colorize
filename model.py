@@ -313,10 +313,8 @@ class AutoEncoder(nn.Module):
 
     def forward(self, x):
         out = self.encoder(x)
-        # print(out.shape)
         out = self.decoder(out)
-        # print(out.shape)
-        # out = self.edge(out)
+
         return out
 
 class Edge(nn.Module):
@@ -324,7 +322,7 @@ class Edge(nn.Module):
 		super(Edge, self).__init__()
 		self.x_filter = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
 		self.y_filter = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-		self.convx = nn.Conv1d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+		self.convx = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
 		self.convy = nn.Conv2d(1, 1, kernel_size=3 , stride=1, padding=1, bias=False)
 		self.weights_x = torch.from_numpy(self.x_filter).float().unsqueeze(0).unsqueeze(0)
 		self.weights_y = torch.from_numpy(self.y_filter).float().unsqueeze(0).unsqueeze(0)
@@ -348,6 +346,33 @@ class Edge(nn.Module):
 		# self.g.requires_grad = True
 		# self.g.register_hook(print)
 		return self.g
+
+
+def edge_loss(out, target, cuda=True):
+	x_filter = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+	y_filter = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+	convx = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+	convy = nn.Conv2d(1, 1, kernel_size=3 , stride=1, padding=1, bias=False)
+	weights_x = torch.from_numpy(x_filter).float().unsqueeze(0).unsqueeze(0)
+	weights_y = torch.from_numpy(y_filter).float().unsqueeze(0).unsqueeze(0)
+	# print(weights_x.requires_grad)
+	# print(weights_y.requires_grad)
+	if cuda:
+		weights_x = weights_x.cuda()
+		weights_y = weights_y.cuda()
+
+	convx.weight = nn.Parameter(weights_x)
+	convy.weight = nn.Parameter(weights_y)
+
+	g1_x = convx(out)
+	g2_x = convx(target)
+	g1_y = convy(out)
+	g2_y = convy(target)
+
+	g_1 = torch.sqrt(torch.pow(g1_x, 2) + torch.pow(g1_y, 2))
+	g_2 = torch.sqrt(torch.pow(g2_x, 2) + torch.pow(g2_y, 2))
+
+	return torch.mean((g_1 - g_2).pow(2))
 
 
 def count_parameters(model):
