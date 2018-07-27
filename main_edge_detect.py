@@ -106,7 +106,7 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			model.train()
 			
 			
-			x = x + torch.randn(x.shape)
+			# x = x + torch.randn(x.shape)
 			x = x.to(device)
 
 			# with torch.no_grad():
@@ -119,7 +119,7 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			optimizer.zero_grad()
 
 			out = model(x)
-			
+			print('out grad', out.requires_grad)
 			## out.requires_grad = True
 			out_edge = edge_detector(model(x))
 
@@ -208,7 +208,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 
 			if args.test_mode:
 				print('show image')
-				plt.imshow(grid, cmap='gray'); plt.show()
+				# plt.imshow(grid, cmap='gray'); plt.show()
 
 			grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
 			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)

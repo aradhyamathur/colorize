@@ -372,6 +372,9 @@ def edge_loss(out, target, cuda=True):
 	g_1 = torch.sqrt(torch.pow(g1_x, 2) + torch.pow(g1_y, 2))
 	g_2 = torch.sqrt(torch.pow(g2_x, 2) + torch.pow(g2_y, 2))
 
+	print('g_1.requires_grad', g_1.requires_grad)
+	print('g_2.requires_grad', g_2.requires_grad)
+
 	return torch.mean((g_1 - g_2).pow(2))
 
 
