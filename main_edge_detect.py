@@ -8,7 +8,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Edge, edge_loss
+from model import AutoEncoder, EdgeLoss, EdgeLossLaplace
 from ae_dataloader_efficient import *
 import datetime
 from itertools import cycle
@@ -38,8 +38,10 @@ parser.add_argument('--batch_size_test', type=int, help="test batch size")
 parser.add_argument('--reset_files', help='reset file stats(True/False)')
 parser.add_argument("--start_epoch", type=int, help="specify start epoch to continue from")
 parser.add_argument("--end_epoch", type=int, help="specify end epoch to continue to")
-parser.add_argument("--learning_rate_ae", type=float ,help="learning rate")
-parser.add_argument("--test_mode", type=bool, help="run in test mode") 
+parser.add_argument("--learning_rate_edge", type=float ,help="learning rate")
+parser.add_argument("--test_mode", type=bool, help="run in test mode")
+parser.add_argument("--device", nargs='?', const='cuda', type=str) 
+parser.add_argument("--criterion_edge", nargs="?", const='grad', type=str)
 
 args = parser.parse_args()
 
@@ -52,8 +54,11 @@ LOG_DIR = './edge_log_dir/'
 np.set_printoptions(threshold=np.nan)
 
 summary_writer = None 
+if not args.device:
+	device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+	device = torch.device(args.device)
 
-device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SAVED_MODEL_DIR = './edge_trained_models/'
 RANDOM_OUTPUTS_DIR = './edge_rand_outputs/'
 EVAL_DIR = './edge_test_outputs/'
@@ -68,7 +73,7 @@ if not os.path.exists(LOG_DIR):
 
 
 
-def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
+def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
@@ -94,11 +99,18 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 		end_epoch = args.end_epoch
 	else:end_epoch = 100
 	
-	edge_detector = Edge(torch.cuda.is_available())
+	# edge_detector = Edge(torch.cuda.is_available())
 
-	criterion_ae = nn.MSELoss()
-	optimizer = optim.Adam(list(filter(lambda p: p.requires_grad,edge_detector.parameters())) + list(model.parameters()), lr=learning_rate_ae)
-	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_ae, optimizer)
+	
+
+	if args.criterion_edge == 'grad' or args.criterion_edge is None:
+		criterion_edge = EdgeLoss(device)
+	elif args.criterion_edge == 'laplace':
+		criterion_edge = EdgeLossLaplace(device)
+	else:
+		raise Exception('ValueError: Illegal criterion specified')
+	optimizer = optim.Adam(model.parameters(), lr=learning_rate_edge)
+	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer)
 
 	for i in range(start_epoch, end_epoch):
 		for j, (x, (y_l, _)) in enumerate(train_dataloader):
@@ -106,36 +118,20 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 			model.train()
 			
 			
-			# x = x + torch.randn(x.shape)
 			x = x.to(device)
-
-			# with torch.no_grad():
-			# 	x_edges = edge_detector(x)
-			
-			# y_l = y_l.to(device)
-
-			# y_ab = y_ab.to(device)
 
 			optimizer.zero_grad()
 
 			out = model(x)
-			print('out grad', out.requires_grad)
-			## out.requires_grad = True
-			out_edge = edge_detector(model(x))
 
-
-			# if args.test_mode:
-				# print(out_edge)
-			# loss = criterion_ae(out_edge, x_edges)
-
-			loss = edge_loss(out, x)
+			loss, g1, g2 = criterion_edge(out, x)
 			loss.backward()
 			optimizer.step()
 			
 
-			value = 'Iter : %d Batch: %d AE loss: %.4f \n'%(i, j, loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f \n'%(i, j, loss.item())
 			print(value)
-			summary_writer.add_scalar("AE loss", loss.item())
+			summary_writer.add_scalar("Edge Loss", loss.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			# if j % draw_iter == 0:
@@ -154,7 +150,7 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 
 			if args.test_mode or (j % test_iter == 0 and j != 0) :
 
-				test_losses = test_model(model, test_dataloader, i, now, j)
+				test_losses = test_model(model, test_dataloader, i, now, j, criterion_edge)
 				avg_test_loss = np.average(test_losses)
 				summary_writer.add_scalar("Test loss", avg_test_loss)
 				print('Test loss Avg: ', avg_test_loss)
@@ -166,7 +162,7 @@ def train(model, learning_rate_ae, train_dataloader, test_dataloader, now):
 		if args.test_mode:
 			break
 
-def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
+def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 	global summary_writer
 
@@ -176,20 +172,17 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 	model.train_stat = False
 	test_losses = []
 	diffs_avg = []
-	edge_detector = Edge(False)
-
+	# edge_detector = Edge(False)
+	# criterion_edge = EdgeLoss(device)
 	with torch.no_grad():
 		for i, (name, x, (y_l,_)) in enumerate(test_loader):
 
 			x = x.to(device)
 			y_l = y_l.to(device)
-			with torch.no_grad():
-				x_in = edge_detector(x.cpu()) 
-			inputs_edge = x_in.cpu()
-			inputs = x.cpu()
+
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss = edge_loss(out, x)
+			loss, g1, g2 = criterion_edge(out, x)
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
@@ -198,13 +191,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, test_len=100):
 			out = out.squeeze(1)
 			output = out.cpu().numpy()
 			j = random.randint(0, len(output) - 1)
-			image_edge = inputs_edge[j].squeeze(0).numpy()
-			image = inputs[j].squeeze(0).numpy()
+			image_edge_in = g2[j].squeeze(0).cpu().numpy()
+			image_edge_out = g1[j].squeeze(0).cpu().numpy()
+			image = x[j].squeeze(0).cpu().numpy()
 
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 				
 			
-			grid = make_grid(image, output[j], image_edge)
+			grid = make_grid(image, output[j], image_edge_in, image_edge_out)
 
 			if args.test_mode:
 				print('show image')
@@ -260,10 +254,10 @@ def main():
 
 
 
-	if args.learning_rate_ae:
-		learning_rate_ae = args.learning_rate_ae
+	if args.learning_rate_edge:
+		learning_rate_edge = args.learning_rate_edge
 	else:
-		learning_rate_ae = 5e-3
+		learning_rate_edge = 5e-3
 	
 
 	batch_size_train = 10
@@ -287,7 +281,7 @@ def main():
 
 	autoencoder = autoencoder.to(device)
 
-	train(autoencoder, learning_rate_ae, train_dataloader, test_dataloader, now)
+	train(autoencoder, learning_rate_edge, train_dataloader, test_dataloader, now)
 
 
 if __name__ == '__main__':

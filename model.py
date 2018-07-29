@@ -343,39 +343,64 @@ class Edge(nn.Module):
 		g_y = self.convy(x)
 		self.g = torch.sqrt(torch.pow(g_x, 2) + torch.pow(g_y, 2))
 		print(self.g.requires_grad)
-		# self.g.requires_grad = True
-		# self.g.register_hook(print)
+
 		return self.g
 
+class EdgeLoss(nn.Module):
 
-def edge_loss(out, target, cuda=True):
-	x_filter = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
-	y_filter = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-	convx = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
-	convy = nn.Conv2d(1, 1, kernel_size=3 , stride=1, padding=1, bias=False)
-	weights_x = torch.from_numpy(x_filter).float().unsqueeze(0).unsqueeze(0)
-	weights_y = torch.from_numpy(y_filter).float().unsqueeze(0).unsqueeze(0)
-	# print(weights_x.requires_grad)
-	# print(weights_y.requires_grad)
-	if cuda:
-		weights_x = weights_x.cuda()
-		weights_y = weights_y.cuda()
+    def __init__(self, device):
+        super(EdgeLoss, self).__init__()
+        x_filter = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+        y_filter = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+        self.weights_x = torch.from_numpy(x_filter).float().unsqueeze(0).unsqueeze(0)
+        self.weights_y = torch.from_numpy(y_filter).float().unsqueeze(0).unsqueeze(0)
 
-	convx.weight = nn.Parameter(weights_x)
-	convy.weight = nn.Parameter(weights_y)
+        
+        self.weights_x = self.weights_x.to(device)
+        self.weights_y = self.weights_y.to(device)
 
-	g1_x = convx(out)
-	g2_x = convx(target)
-	g1_y = convy(out)
-	g2_y = convy(target)
+    
+    def forward(self, out, target):
 
-	g_1 = torch.sqrt(torch.pow(g1_x, 2) + torch.pow(g1_y, 2))
-	g_2 = torch.sqrt(torch.pow(g2_x, 2) + torch.pow(g2_y, 2))
 
-	print('g_1.requires_grad', g_1.requires_grad)
-	print('g_2.requires_grad', g_2.requires_grad)
+        g1_x = nn.functional.conv2d(out, self.weights_x, padding=1)
+        g2_x = nn.functional.conv2d(target, self.weights_x, padding=1)
+        g1_y = nn.functional.conv2d(out, self.weights_y, padding=1)
+        g2_y = nn.functional.conv2d(target, self.weights_y, padding=1)
+        
 
-	return torch.mean((g_1 - g_2).pow(2))
+
+        g_1 = torch.sqrt(torch.pow(g1_x, 2) + torch.pow(g1_y, 2))
+        g_2 = torch.sqrt(torch.pow(g2_x, 2) + torch.pow(g2_y, 2))
+
+        return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
+
+class EdgeLossLaplace(nn.Module):
+
+    def __init__(self, device):
+        super(EdgeLossLaplace, self).__init__()
+        lap_filter = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
+        self.weights_l = torch.from_numpy(lap_filter).float().unsqueeze(0).unsqueeze(0)
+
+        
+        self.weights_l = self.weights_l.to(device)
+
+    
+    def forward(self, out, target):
+
+
+        g1_x = nn.functional.conv2d(out, self.weights_l, padding=1)
+        g2_x = nn.functional.conv2d(target, self.weights_l, padding=1)
+        # g1_y = nn.functional.conv2d(out, self.weights_y, padding=1)
+        # g2_y = nn.functional.conv2d(target, self.weights_y, padding=1)
+        
+
+
+        # g_1 = torch.sqrt(torch.pow(g1_x, 2) + torch.pow(g1_y, 2))
+        # g_2 = torch.sqrt(torch.pow(g2_x, 2) + torch.pow(g2_y, 2))
+
+        return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
+
 
 
 def count_parameters(model):
