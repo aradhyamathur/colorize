@@ -13,10 +13,14 @@ def update_readings(filename, reading):
 	f.writelines(reading)
 	f.close() 
 
-def make_grid(gray_img, ae_img, edge_img_in, edge_img_out):
+def normalize(image):
+	image = (image - image.min()) / (image.max() - image.min())
+	return image
 
-	img_grid = np.concatenate((gray_img, ae_img, edge_img_in, edge_img_out), axis=1)
-	return img_grid
+# def make_grid(gray_img, ae_img, edge_img_in, edge_img_out):
+
+# 	img_grid = np.concatenate((gray_img, ae_img, edge_img_in, edge_img_out), axis=1)
+# 	return img_grid
 
 def save_model_info(model, DIR, epoch_start, epoch_end, learning_rate_ae, optimizer_ae):
 	f = open(DIR + "model_info.txt", 'a')

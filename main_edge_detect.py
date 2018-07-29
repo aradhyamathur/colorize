@@ -22,7 +22,7 @@ from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
-
+from torchvision.utils import make_grid
 
 
 
@@ -80,7 +80,7 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 100
+	test_iter = 500
 	if args.test_mode:
 		draw_iter = 1
 		all_save_iter = 1
@@ -191,23 +191,37 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			out = out.squeeze(1)
 			output = out.cpu().numpy()
 			j = random.randint(0, len(output) - 1)
+			
+			# normalized_out = normalize(output[j])
+
 			image_edge_in = g2[j].squeeze(0).cpu().numpy()
+			# image_edge_in = normalize(image_edge_in)
+			
 			image_edge_out = g1[j].squeeze(0).cpu().numpy()
+			# image_edge_out = normalize(image_edge_out)
+			
 			image = x[j].squeeze(0).cpu().numpy()
 
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 				
 			
-			grid = make_grid(image, output[j], image_edge_in, image_edge_out)
-
+			## grid1 = make_grid(image, make_grid(out[j].cpu(), normalize=True, range=(0,1)), make_grid(g2[j], normalize=True, range=(0,1)), image_edge_out)
+			grid1 = make_grid(g1,normalize=True, range=(0,1))
+			grid2 = make_grid(g2, normalize=True, range=(0,1))
+			grid3 = make_grid(out, normalize=True, range=(0,1)) 
+			print(type(grid1[0]), print(grid1[0].shape	))
 			if args.test_mode:
 				print('show image')
 				# plt.imshow(grid, cmap='gray'); plt.show()
 
-			grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
+			## grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
+			img = grid1[0].unsqueeze(2).cpu().numpy().astype(np.uint8)
+			grid_rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+			print('Image Dim', img.shape)
+			
 			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
 			
-			cv2.imwrite(file_name, grid)
+			# cv2.imwrite(file_name, grid1.cpu().numpy())
 
 			with open(EVAL_DIR+now+'/order.txt', 'a') as f:
 				val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
@@ -260,8 +274,8 @@ def main():
 		learning_rate_edge = 5e-3
 	
 
-	batch_size_train = 10
-	batch_size_test = 5
+	batch_size_train = 15
+	batch_size_test = 15
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
