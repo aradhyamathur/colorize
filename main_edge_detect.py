@@ -22,7 +22,7 @@ from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
-from torchvision.utils import make_grid
+from torchvision.utils import make_grid, save_image
 
 
 
@@ -41,7 +41,7 @@ parser.add_argument("--end_epoch", type=int, help="specify end epoch to continue
 parser.add_argument("--learning_rate_edge", type=float ,help="learning rate")
 parser.add_argument("--test_mode", type=bool, help="run in test mode")
 parser.add_argument("--device", nargs='?', const='cuda', type=str) 
-parser.add_argument("--criterion_edge", nargs="?", const='grad', type=str)
+parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 
 args = parser.parse_args()
 
@@ -62,12 +62,14 @@ else:
 SAVED_MODEL_DIR = './edge_trained_models/'
 RANDOM_OUTPUTS_DIR = './edge_rand_outputs/'
 EVAL_DIR = './edge_test_outputs/'
+EVAL_IMG_DIR = './edge_test_output_images/'
 
 if not os.path.exists(SAVED_MODEL_DIR):
 	os.makedirs(SAVED_MODEL_DIR)
 if not os.path.exists(RANDOM_OUTPUTS_DIR):
 	os.makedirs(RANDOM_OUTPUTS_DIR)
-
+if not os.path.exists(EVAL_IMG_DIR):
+	os.makedirs(EVAL_IMG_DIR)
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
@@ -77,7 +79,7 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 10
+	draw_iter = 250
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 500
@@ -134,8 +136,12 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 			summary_writer.add_scalar("Edge Loss", loss.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
-			# if j % draw_iter == 0:
-			# 	draw_outputs(i, model, now, args.data_path, filenames, j)
+			if j % draw_iter == 0:
+				save_image(x, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png', normalize=True)
+				save_image(g1, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
+				save_image(g2, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
+				save_image(out, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png', normalize=True)
+				# draw_outputs(i, model, now, args.data_path, filenames, j)
 			
 			if j % all_save_iter == 0:
 				print('..SAVING MODEL')
@@ -188,8 +194,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			test_losses.append(loss.item())
 
-			out = out.squeeze(1)
-			output = out.cpu().numpy()
+			out_sq = out.squeeze(1)
+			output = out_sq.cpu().numpy()
 			j = random.randint(0, len(output) - 1)
 			
 			# normalized_out = normalize(output[j])
@@ -203,23 +209,27 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			image = x[j].squeeze(0).cpu().numpy()
 
 			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
-				
+			save_image(x, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in.png', normalize=True)
+			save_image(g1, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out_lap.png', normalize=True)
+			save_image(g2, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in_lap.png', normalize=True)
+			save_image(out, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
 			
+
 			## grid1 = make_grid(image, make_grid(out[j].cpu(), normalize=True, range=(0,1)), make_grid(g2[j], normalize=True, range=(0,1)), image_edge_out)
-			grid1 = make_grid(g1,normalize=True, range=(0,1))
-			grid2 = make_grid(g2, normalize=True, range=(0,1))
-			grid3 = make_grid(out, normalize=True, range=(0,1)) 
-			print(type(grid1[0]), print(grid1[0].shape	))
+			# grid1 = make_grid(g1,normalize=True, range=(0,1))
+			# grid2 = make_grid(g2, normalize=True, range=(0,1))
+			# grid3 = make_grid(out, normalize=True, range=(0,1)) 
+			# print(type(grid1[0]), print(grid1[0].shape	))
 			if args.test_mode:
 				print('show image')
 				# plt.imshow(grid, cmap='gray'); plt.show()
 
 			## grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
-			img = grid1[0].unsqueeze(2).cpu().numpy().astype(np.uint8)
-			grid_rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-			print('Image Dim', img.shape)
+			# img = grid1[0].unsqueeze(2).cpu().numpy().astype(np.uint8)
+			# grid_rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+			# print('Image Dim', img.shape)
 			
-			summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
+			# summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
 			
 			# cv2.imwrite(file_name, grid1.cpu().numpy())
 
@@ -274,8 +284,8 @@ def main():
 		learning_rate_edge = 5e-3
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 30
+	batch_size_test = 30
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
