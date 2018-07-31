@@ -82,7 +82,7 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 	draw_iter = 250
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 500
+	test_iter = 250
 	if args.test_mode:
 		draw_iter = 1
 		all_save_iter = 1
@@ -237,8 +237,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 				val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
 				f.writelines(val)
 
-			if i % 100 == 0 and i !=0:
-				break
+			if i !=0:
+				# break
 				if args.test_mode:
 					break
 			if args.test_mode:
@@ -281,11 +281,11 @@ def main():
 	if args.learning_rate_edge:
 		learning_rate_edge = args.learning_rate_edge
 	else:
-		learning_rate_edge = 5e-3
+		learning_rate_edge = 5e-4	
 	
 
-	batch_size_train = 30
-	batch_size_test = 30
+	batch_size_train = 15
+	batch_size_test = 15
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:

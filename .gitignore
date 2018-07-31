@@ -15,3 +15,4 @@ edge_log_dir/
 edge_test_outputs/
 edge_rand_outputs/
 edge_trained_models/
+edge_test_output_images/

@@ -8,20 +8,20 @@ class Encoder(nn.Module):
 	def __init__(self):
 
 		super(Encoder, self).__init__()
-		self.conv1 = nn.Conv2d(1, 1024, 3, padding=1, stride=2)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 256, 3, padding=1)
-		self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
-		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1)  
-		self.conv6 = nn.Conv2d(1024, 1024, 3, padding=1, stride=2)
-		self.conv7 = nn.Conv2d(1024, 2048, 3, padding=1, stride=2)
-		self.bn1 = nn.BatchNorm2d(1024)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(256)
+		self.conv1 = nn.Conv2d(1, 2048, 3, padding=1, stride=2)
+		self.conv2 = nn.Conv2d(2048, 1024, 3, padding=1)
+		self.conv3 = nn.Conv2d(1024, 1024, 3, padding=1)
+		self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv5 = nn.Conv2d(512, 256, 3, padding=1)  
+		self.conv6 = nn.Conv2d(256, 256, 3, padding=1, stride=2)
+		self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
+		self.bn1 = nn.BatchNorm2d(2048)
+		self.bn2 = nn.BatchNorm2d(1024)
+		self.bn3 = nn.BatchNorm2d(1024)
 		self.bn4 = nn.BatchNorm2d(512)
-		self.bn5 = nn.BatchNorm2d(1024)
-		self.bn6 = nn.BatchNorm2d(1024)
-		self.bn7 = nn.BatchNorm2d(2048)
+		self.bn5 = nn.BatchNorm2d(256)
+		self.bn6 = nn.BatchNorm2d(256)
+		self.bn7 = nn.BatchNorm2d(128)	
 
 
 
@@ -36,25 +36,27 @@ class Encoder(nn.Module):
 
 		out = self.bn1(F.leaky_relu(self.conv1(x)))
 
-		#print('Conv1:', out.shape)
+		# print('Conv1:', out.shape)
 
 		out = self.bn2(F.leaky_relu(self.conv2(out)))
 
-		#print('Conv2: ', out.shape)
+		# print('Conv2: ', out.shape)
 
 		out = self.bn3(F.leaky_relu(self.conv3(out)))
 
-		#print('Conv3: ', out.shape)
+		# print('Conv3: ', out.shape)
 
 		out = self.bn4(F.leaky_relu(self.conv4(out)))
-
-		#print('Conv4: ', out.shape)
+		# print('Conv4: ', out.shape)
+		
 		out = self.bn5(F.leaky_relu(self.conv5(out)))
-
+		# print('Conv5: ', out.shape)
+		
 		out = self.bn6(F.leaky_relu(self.conv6(out)))
+		# print('Conv6: ', out.shape)
 		
 		out = self.bn7(F.leaky_relu(self.conv7(out)))
-		
+		# print('Conv7: ', out.shape)
 		return out
 
 
@@ -249,17 +251,17 @@ class ColorDecoderConvTrans(nn.Module):
         self.upsample1 = nn.Upsample(scale_factor=4)
         self.upsample2 = nn.Upsample(scale_factor=2)
 
-        self.conv1 = nn.ConvTranspose2d(2048, 1024, 3, padding=1, stride=2, output_padding=1)
-        self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-        self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
-        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv1 = nn.ConvTranspose2d(128, 2048, 3, padding=1, stride=2, output_padding=1)
+        self.conv2 = nn.Conv2d(2048, 1024, 3, padding=1)
+        self.conv3 = nn.ConvTranspose2d(1024, 1024, 3, padding=1, stride=2, output_padding=1)
+        self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
         self.conv5 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
-        self.conv6 = nn.Conv2d(256, 128, 3, padding=1)
+        self.conv6 = nn.Conv2d(256,	 128, 3, padding=1)
         self.conv7 = nn.Conv2d(128, out_channels, 3, padding=1)
 
-        self.bn1 = nn.BatchNorm2d(1024)
-        self.bn2 = nn.BatchNorm2d(512)
-        self.bn3 = nn.BatchNorm2d(256)
+        self.bn1 = nn.BatchNorm2d(2048)
+        self.bn2 = nn.BatchNorm2d(1024)
+        self.bn3 = nn.BatchNorm2d(1024)
         self.bn4 = nn.BatchNorm2d(512)
         self.bn5 = nn.BatchNorm2d(256)
         self.bn6 = nn.BatchNorm2d(128)
@@ -273,26 +275,26 @@ class ColorDecoderConvTrans(nn.Module):
     def forward(self, x):
         # print(x.shape)
         #print('DECODER')
-        out = self.bn1(F.relu(self.conv1(x)))
+        out = self.bn1(F.leaky_relu(self.conv1(x)))
         #print('Conv1 : ', out.shape)
 
         # out = self.upsample1(out)
 
-        out = self.bn2(F.relu(self.conv2(out)))
+        out = self.bn2(F.leaky_relu(self.conv2(out)))
         #print('Conv2: ', out.shape)
 
         # out = self.upsample2(out)
 
-        out = self.bn3(F.relu(self.conv3(out)))
+        out = self.bn3(F.leaky_relu(self.conv3(out)))
         #print('Conv3: ', out.shape)
 
-        out = self.bn4(F.relu(self.conv4(out)))
+        out = self.bn4(F.leaky_relu(self.conv4(out)))
 
-        out = self.bn5(F.relu(self.conv5(out)))
+        out = self.bn5(F.leaky_relu(self.conv5(out)))
 
-        out = self.bn6(F.relu(self.conv6(out)))
+        out = self.bn6(F.leaky_relu(self.conv6(out)))
 
-        out = F.relu(self.conv7(out))
+        out = F.leaky_relu(self.conv7(out))
         #print('Conv4: ',  out.shape)
 
         return out
