@@ -114,7 +114,7 @@ class ColorDecoder(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.Conv2d(2048, 256, 3, padding=1)
+		self.conv1 = nn.Conv2d(128, 256, 3, padding=1)
 		self.conv2 = nn.Conv2d(256, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 1024, 3, padding=1)
 		self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
@@ -194,11 +194,11 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
 
-	def __init__(self, dim):
+	def __init__(self, dim, in_channels):
 
 		super(Discriminator, self).__init__()
 		
-		self.conv1 = nn.Conv2d(2, 1024, 3, padding=1,stride=2)
+		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
 		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
 		self.conv4 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
@@ -207,8 +207,8 @@ class Discriminator(nn.Module):
 		self.dropout2 = nn.Dropout(p=0.2) 
 
 		self.linear1 = nn.Linear(128 * int(dim/8) * int(dim/8), 100)
-		self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(50, 1)
+		# self.linear2 = nn.Linear(100, 50)
+		self.linear3 = nn.Linear(100, 1)
 
 		self.bn1 = nn.BatchNorm2d(1024)
 		self.bn2 = nn.BatchNorm2d(512)
@@ -238,8 +238,8 @@ class Discriminator(nn.Module):
 		out = F.relu(self.linear1(out))
 
 		out = self.dropout1(out)
-		out = F.relu(self.linear2(out))
-		out = self.dropout2(out)
+		# out = F.relu(self.linear2(out))
+		# out = self.dropout2(out)
 		out = F.sigmoid(self.linear3(out))
 		return out
 
@@ -305,10 +305,11 @@ class AutoEncoder(nn.Module):
         Autoencoder
     """
 
-    def __init__(self, train=True):
+    def __init__(self, out_channels=1, train=True):
         super(AutoEncoder, self).__init__()
         self.encoder = Encoder()
-        self.decoder = ColorDecoderConvTrans(out_channels=1)
+        # self.decoder = ColorDecoderConvTrans(out_channels=out_channels)
+        self.decoder = ColorDecoder()
 
 
 
@@ -410,19 +411,23 @@ def count_parameters(model):
 
 def test_net():
 	CUDA = torch.cuda.is_available()
-	autoencoder = AutoEncoder()
-
+	autoencoder = AutoEncoder(out_channels=3)
+	discriminator = Discriminator(128, 3)
 	print('Autoencoder Params', count_parameters(autoencoder))
+	print('Discriminator Params', count_parameters(discriminator))
 	tensor = torch.randn(5, 1, 128, 128)
 	
 	if CUDA :
 		autoencoder = autoencoder.cuda()
 		tensor = tensor.cuda()
+		discriminator = discriminator.cuda()
 		# val = input()
 	 
 	out_l = autoencoder(tensor)
+	out_disc = discriminator(out_l)
 	
 	print(out_l.shape)
+	print(out_disc.shape)
 
 if __name__ == '__main__':
 	test_net()

@@ -42,6 +42,7 @@ parser.add_argument("--learning_rate_edge", type=float ,help="learning rate")
 parser.add_argument("--test_mode", type=bool, help="run in test mode")
 parser.add_argument("--device", nargs='?', const='cuda', type=str) 
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
+parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
 
 args = parser.parse_args()
 
@@ -91,7 +92,8 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 
 	cur_model_dir = SAVED_MODEL_DIR + now + '/'
 	filenames = os.listdir(args.data_path + COLOR_DIR)
-
+	if not os.path.exists(RANDOM_OUTPUTS_DIR + now):
+		os.makedirs(RANDOM_OUTPUTS_DIR + now)
 
 	if args.start_epoch:
 		start_epoch = args.start_epoch
@@ -115,7 +117,7 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer)
 
 	for i in range(start_epoch, end_epoch):
-		for j, (x, (y_l, _)) in enumerate(train_dataloader):
+		for j, (x, (y_l, y_ab)) in enumerate(train_dataloader):
 
 			model.train()
 			
@@ -137,10 +139,10 @@ def train(model, learning_rate_edge, train_dataloader, test_dataloader, now):
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
-				save_image(x, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png', normalize=True)
-				save_image(g1, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
-				save_image(g2, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
-				save_image(out, RANDOM_OUTPUTS_DIR + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png', normalize=True)
+				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png', normalize=True)
+				save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
+				save_image(g2, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
+				save_image(out, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png', normalize=True)
 				# draw_outputs(i, model, now, args.data_path, filenames, j)
 			
 			if j % all_save_iter == 0:
@@ -172,19 +174,21 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 	global summary_writer
 
-	if not os.path.exists(EVAL_DIR + now):
-		os.makedirs(EVAL_DIR + now)
+	if not os.path.exists(EVAL_IMG_DIR + now):
+		os.makedirs(EVAL_IMG_DIR + now)
 	model.eval()
 	model.train_stat = False
 	test_losses = []
 	diffs_avg = []
+	# if not os.path.exists(EVAL_DIR + now):
+	# 	os.makedirs(RANDOM_OUTPUTS_DIR + now)
 	# edge_detector = Edge(False)
 	# criterion_edge = EdgeLoss(device)
 	with torch.no_grad():
-		for i, (name, x, (y_l,_)) in enumerate(test_loader):
+		for i, (name, x, (y_l,y_ab)) in enumerate(test_loader):
 
 			x = x.to(device)
-			y_l = y_l.to(device)
+			# y_l = y_l.to(device)
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
@@ -208,11 +212,11 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			image = x[j].squeeze(0).cpu().numpy()
 
-			file_name = EVAL_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
-			save_image(x, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in.png', normalize=True)
-			save_image(g1, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out_lap.png', normalize=True)
-			save_image(g2, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in_lap.png', normalize=True)
-			save_image(out, EVAL_IMG_DIR + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
+			file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
+			save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in.png', normalize=True)
+			save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out_lap.png', normalize=True)
+			save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in_lap.png', normalize=True)
+			save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
 			
 
 			## grid1 = make_grid(image, make_grid(out[j].cpu(), normalize=True, range=(0,1)), make_grid(g2[j], normalize=True, range=(0,1)), image_edge_out)
@@ -233,9 +237,9 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			# cv2.imwrite(file_name, grid1.cpu().numpy())
 
-			with open(EVAL_DIR+now+'/order.txt', 'a') as f:
-				val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
-				f.writelines(val)
+			# with open(EVAL_DIR+now+'/order.txt', 'a') as f:
+			# 	val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
+			# 	f.writelines(val)
 
 			if i !=0:
 				# break
@@ -249,9 +253,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 def main():
 	global summary_writer
-	
-	now = str(datetime.datetime.now()) + '/'
+
+	if not args.custom_name:
+		now = str(datetime.datetime.now()) + '/'
+	else:
+		now = str(datetime.datetime.now()) + '_' + args.custom_name + '/'
+
 	cur_model_dir = SAVED_MODEL_DIR + now
+
 	os.makedirs(cur_model_dir)
 
 	summary_writer = SummaryWriter(LOG_DIR + now)

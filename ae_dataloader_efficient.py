@@ -46,7 +46,7 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     return image
 
 def generate_train_test_split(DATA_DIR):
-    color_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
+    color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
     scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
 
     X_train, X_test, y_train, y_test = train_test_split(scan_images, color_images, test_size=0.2, random_state=123)
@@ -69,17 +69,17 @@ class EfficientImageDataSet(Dataset):
         x_processed = x_processed.unsqueeze(0)
         
         
-        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
+        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         y_processed_l = y_processed
-        # y_processed_ab  = y_processed[:, :, 1:]
+        y_processed_ab  = y_processed[:, :, 1:]
         y_processed_l = y_processed_l.unsqueeze(0)
-        # y_processed_ab = y_processed_ab.permute(2, 1, 0)
+        y_processed_ab = y_processed_ab.permute(2, 1, 0)
         
         y_processed_l = y_processed_l.numpy()
-        # y_processed_ab = y_processed_ab.numpy()
+        y_processed_ab = y_processed_ab.numpy()
         x_processed = x_processed.numpy()
         
-        return x_processed, (y_processed_l, 1)
+        return x_processed, (y_processed_l, y_processed_ab)
 
     
     def __len__(self):
@@ -100,15 +100,15 @@ class EfficientImageDataTestSet(Dataset):
         x_processed = x_processed.unsqueeze(0)
         
         
-        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
+        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         y_processed_l = y_processed
 
-        # y_processed_ab  = y_processed[:, :, 1:]
+        y_processed_ab  = y_processed[:, :, 1:]
         y_processed_l = y_processed_l.unsqueeze(0)
-        # y_processed_ab = y_processed_ab.permute(2, 1, 0)
+        y_processed_ab = y_processed_ab.permute(2, 1, 0)
         
         y_processed_l = y_processed_l.numpy()
-        # y_processed_ab = y_processed_ab.numpy()
+        y_processed_ab = y_processed_ab.numpy()
         x_processed = x_processed.numpy()
         
         return img_name, x_processed, (y_processed_l, 1)
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     for x, y in cycle(try_dataloader):
         print(x.shape)
         print(y[0].shape)
-        # print(y[1].shape)
+        print(y[1].shape)
         # print('L channel ', y[:,0,:,:].unsqueeze(1).shape)
         # print('AB channel', y[:,1:,:,:].shape)
         break
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     for x, y in try_dataloader:
         print(x.shape)
         print(y[0].shape)
-        # print(y[1].shape)
+        print(y[1].shape)
         break
     try_dataloader = create_testdataloader(data_dir, X_test, y_test, 15)
     for i, (name, x, y) in enumerate(try_dataloader):
@@ -165,7 +165,7 @@ if __name__ == '__main__':
         print(name)
         print(x.shape)
         print(y[0].shape)
-        # print(y[1].shape)
+        print(y[1].shape)
 
         if i % 2 == 0 and i != 0:
             break
