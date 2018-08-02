@@ -308,8 +308,8 @@ class AutoEncoder(nn.Module):
     def __init__(self, out_channels=1, train=True):
         super(AutoEncoder, self).__init__()
         self.encoder = Encoder()
-        # self.decoder = ColorDecoderConvTrans(out_channels=out_channels)
-        self.decoder = ColorDecoder()
+        self.decoder = ColorDecoderConvTrans(out_channels=out_channels)
+        # self.decoder = ColorDecoder()
 
 
 
