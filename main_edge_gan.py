@@ -130,6 +130,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			y = y.to(device)
 
 			optimizer_g.zero_grad()
+			optimizer_d.zero
 
 			out = model(x)
 
