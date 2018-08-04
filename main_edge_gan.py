@@ -8,8 +8,8 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, EdgeLoss, EdgeLossLaplace
-from ae_dataloader_efficient import *
+from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss
+from dataloader_rgb import *
 import datetime
 from itertools import cycle
 import random
@@ -35,11 +35,12 @@ parser.add_argument('--load_prev_model_gen', help='path to previous generator mo
 parser.add_argument('--load_prev_model_disc', help='path to previous discriminator model')
 parser.add_argument('--batch_size_train', type=int, help="train batch size")
 parser.add_argument('--batch_size_test', type=int, help="test batch size")
-# parser.add_argument('--load_prev_model_disc', help='discriminator path')
 parser.add_argument('--reset_files', help='reset file stats(True/False)')
 parser.add_argument("--start_epoch", type=int, help="specify start epoch to continue from")
 parser.add_argument("--end_epoch", type=int, help="specify end epoch to continue to")
-parser.add_argument("--learning_rate_edge", type=float ,help="learning rate")
+parser.add_argument("--learning_rate_edge", type=float ,help="edge learning rate")
+parser.add_argument("--learning_rate_gen", type=float ,help="generator learning rate")
+parser.add_argument("--learning_rate_disc", type=float ,help="discriminator learning rate")
 parser.add_argument("--test_mode", type=bool, help="run in test mode")
 parser.add_argument("--device", nargs='?', const='cuda', type=str) 
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
@@ -51,7 +52,7 @@ if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
 
 
-LOG_DIR = './edge_log_dir/'
+LOG_DIR = './edge_gan_log_dir/'
 
 np.set_printoptions(threshold=np.nan)
 
@@ -110,38 +111,41 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	criterion = nn.BCELoss()
 
-	if args.criterion_edge == 'grad' or args.criterion_edge is None:
+	if args.criterion_edge == 'grad'  :
 		criterion_edge = EdgeLoss(device)
-	elif args.criterion_edge == 'laplace':
-		criterion_edge = EdgeLossLaplace(device)
+	elif args.criterion_edge == 'laplace' or args.criterion_edge is None:
+		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_edge)
-	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_edge)
+	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen)
+	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc)
 	
-	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g) # to be changed
-
+	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
+	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
 		for j, (x, y) in enumerate(train_dataloader):
 
-			model.train()
+			model_g.train()
+			model_d.train()
 			
-			target_y = torch.ones(len(y_ab)).to(device)
-			target_x = torch.zeros(len(y_ab)).to(device)
+			target_y = torch.ones(len(y)).to(device)
+			target_x = torch.zeros(len(y)).to(device)
 
 			x = x + torch.randn(x.shape) 
 			x = x.to(device)
 			y = y.to(device)
+			edge_image_x = x.repeat(1,3, 1, 1)
 
 			optimizer_g.zero_grad()
 			optimizer_d.zero_grad()
 
-			out = model(x)
-
+			out = model_g(x)
+			print(out.shape)
+			print(edge_image_x.shape)
 			d_real = model_d(y)
-			d_fake = model(out)
+			d_fake = model_d(out)
 			d_loss_real = criterion(d_real, target_y)
-			loss_edge, g1, g2 = criterion_edge(out, x)
+			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 			d_loss_fake =  criterion(d_fake, target_x)
 			d_loss = d_loss_fake + d_loss_real + loss_edge
 			d_loss.backward()
@@ -151,19 +155,20 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			optimizer_d.zero_grad()
 
 			out = model_g(x)
-			d_fake = d_model(out)
-			loss_edge, g1, g2 = criterion_edge(out, x)
+			d_fake = model_d(out)
+			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 			g_loss = criterion(d_fake, target_y)
 			loss_G = g_loss + loss_edge
 			loss_G.backward()
 			optimizer_g.step()
-			exit()
+			# print('exiting.......')
+			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f \n'%(i, j, loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), loss_G.item(), d_loss.item())
 			print(value)
 			# summary_writer.add_scalar("Edge Loss", loss.item())
-			summary_writer.add_scalar("Gen Loss", loss_g.item())
-			summary_writer.add_scalar("Disc Loss", loss_d.item())
+			summary_writer.add_scalar("Gen Loss", loss_G.item())
+			summary_writer.add_scalar("Disc Loss", d_loss.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
@@ -175,18 +180,20 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			
 			if j % all_save_iter == 0:
 				print('..SAVING MODEL')
-				torch.save(model.state_dict(), cur_model_dir + 'colorize2ae_' + str(i) + '.pt')
-				print('AE SAVED')
-				print('..SAVED MODEL')
+				torch.save(model_g.state_dict(), cur_model_dir + 'colorize2gen_' + str(i) + '.pt')
+				print('GEN SAVED ')
+				torch.save(model_d.state_dict(), cur_model_dir + 'colorize2disc_' + str(i) + '.pt')
+				print('Disc SAVED')
 
 			if j % cur_save_iter == 0:
 				print('SAVING MODEL')
-				torch.save(model.state_dict(), cur_model_dir + 'colorize_ae_cur.pt')
+				torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
+				torch.save(model_d.state_dict(), cur_model_dir + 'colorize_disc_cur.pt')
 				print('SAVED CURRENT')
 
 			if args.test_mode or (j % test_iter == 0 and j != 0) :
 
-				test_losses = test_model(model, test_dataloader, i, now, j, criterion_edge)
+				test_losses = test_model(model_g, test_dataloader, i, now, j, criterion_edge)
 				avg_test_loss = np.average(test_losses)
 				summary_writer.add_scalar("Test loss", avg_test_loss)
 				print('Test loss Avg: ', avg_test_loss)
@@ -213,14 +220,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 	# edge_detector = Edge(False)
 	# criterion_edge = EdgeLoss(device)
 	with torch.no_grad():
-		for i, (name, x, (y_l,y_ab)) in enumerate(test_loader):
+		for i, (name, x, y) in enumerate(test_loader):
 
 			x = x.to(device)
 			# y_l = y_l.to(device)
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x)
+			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
@@ -319,10 +326,18 @@ def main():
 		learning_rate_edge = args.learning_rate_edge
 	else:
 		learning_rate_edge = 5e-4	
+	if args.learning_rate_gen:
+		learning_rate_gen = args.learning_rate_gen
+	else:
+		learning_rate_gen = 5e-4	
+	if args.learning_rate_disc:
+		learning_rate_disc = args.learning_rate_disc
+	else:
+		learning_rate_disc = 5e-4	
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 2
+	batch_size_test = 2
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
@@ -333,18 +348,21 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = AutoEncoder()	
+	generator = AutoEncoder(out_channels=3)
+	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:
-		generator.load_state_dict(torch.load(args.generator load_prev_model_gen))
-		generator.load_state_dict(torch.disc(args.discriminator load_prev_model_gen))
-		print('AE loaded generator successfully')
-print('AE loaded discrimindisc successfully')
+		generator.load_state_dict(torch.load(args.load_prev_model_gen))
+		print('loaded generator successfully')
+	if args.load_prev_model_disc:	
+		generator.load_state_dict(torch.load(args.load_prev_model_disc))
+		print('loaded discriminator successfully')
 
 
 	generator = generator.to(device)
+	discriminator = discriminator.to(device)
 
-	train(generator, learning_rate_edge, train_dataloader, test_dataloader, now)
+	train(generator, discriminator, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now)
 
 
 if __name__ == '__main__':

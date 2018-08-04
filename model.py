@@ -404,6 +404,30 @@ class EdgeLossLaplace(nn.Module):
 
         return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
 
+class EdgeLossLaplace3CHANNEL(nn.Module):
+
+    def __init__(self, device):
+        super(EdgeLossLaplace3CHANNEL, self).__init__()
+        lap_filter = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
+        # print('lap1', lap_filter.shape)
+
+        lap_filter = np.array([[lap_filter, lap_filter, lap_filter]])
+        # print('lap2', lap_filter.shape)
+        self.weights_l = torch.from_numpy(lap_filter).float()
+
+        
+        self.weights_l = self.weights_l.to(device)
+
+    
+    def forward(self, out, target):
+
+        # print(self.weights_l.shape)
+
+        g_1 = nn.functional.conv2d(out, self.weights_l, padding=1)
+        g_2 = nn.functional.conv2d(target, self.weights_l, padding=1)
+
+        return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
+
 
 
 def count_parameters(model):
