@@ -31,7 +31,8 @@ from torchvision.utils import make_grid, save_image
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', help='path to data folder', required=True)
 parser.add_argument('--image_dim', type=int, help='image dimensions', required=True)
-parser.add_argument('--load_prev_model_ae', help='path to previous model')
+parser.add_argument('--load_prev_model_gen', help='path to previous generator model')
+parser.add_argument('--load_prev_model_disc', help='path to previous discriminator model')
 parser.add_argument('--batch_size_train', type=int, help="train batch size")
 parser.add_argument('--batch_size_test', type=int, help="test batch size")
 # parser.add_argument('--load_prev_model_disc', help='discriminator path')
@@ -116,7 +117,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
 	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_edge)
-	optimizer_g = optim.Adam(model_d.parameters(), lr=learning_rate_edge)
+	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_edge)
 	
 	save_model_info(model, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g) # to be changed
 
@@ -125,23 +126,44 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			model.train()
 			
+			target_y = torch.ones(len(y_ab)).to(device)
+			target_x = torch.zeros(len(y_ab)).to(device)
+
 			x = x + torch.randn(x.shape) 
 			x = x.to(device)
 			y = y.to(device)
 
 			optimizer_g.zero_grad()
-			optimizer_d.zero
+			optimizer_d.zero_grad()
 
 			out = model(x)
 
-			loss, g1, g2 = criterion_edge(out, x)
-			loss.backward()
+			d_real = model_d(y)
+			d_fake = model(out)
+			d_loss_real = criterion(d_real, target_y)
+			loss_edge, g1, g2 = criterion_edge(out, x)
+			d_loss_fake =  criterion(d_fake, target_x)
+			d_loss = d_loss_fake + d_loss_real + loss_edge
+			d_loss.backward()
+			optimizer_d.step()
+
+			optimizer_g.zero_grad()
+			optimizer_d.zero_grad()
+
+			out = model_g(x)
+			d_fake = d_model(out)
+			loss_edge, g1, g2 = criterion_edge(out, x)
+			g_loss = criterion(d_fake, target_y)
+			loss_G = g_loss + loss_edge
+			loss_G.backward()
 			optimizer_g.step()
-			
+			exit()
 
 			value = 'Iter : %d Batch: %d Edge loss: %.4f \n'%(i, j, loss.item())
 			print(value)
-			summary_writer.add_scalar("Edge Loss", loss.item())
+			# summary_writer.add_scalar("Edge Loss", loss.item())
+			summary_writer.add_scalar("Gen Loss", loss_g.item())
+			summary_writer.add_scalar("Disc Loss", loss_d.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
@@ -311,16 +333,18 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	autoencoder = AutoEncoder()	
+	generator = AutoEncoder()	
 
-	if args.load_prev_model_ae:
-		autoencoder.load_state_dict(torch.load(args.load_prev_model_ae))
-		print('AE loaded successfully')
+	if args.load_prev_model_gen:
+		generator.load_state_dict(torch.load(args.generator load_prev_model_gen))
+		generator.load_state_dict(torch.disc(args.discriminator load_prev_model_gen))
+		print('AE loaded generator successfully')
+print('AE loaded discrimindisc successfully')
 
 
-	autoencoder = autoencoder.to(device)
+	generator = generator.to(device)
 
-	train(autoencoder, learning_rate_edge, train_dataloader, test_dataloader, now)
+	train(generator, learning_rate_edge, train_dataloader, test_dataloader, now)
 
 
 if __name__ == '__main__':

@@ -21,5 +21,14 @@ run_edge:
 	python main_edge_detect.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --device cuda
 	# python main_edge_detect.py --data_path ../color_my_pytorch_slices/data/slices  --image_dim 128 --device cuda
 
-test_edge_detect:
+test_edge_gan:
+	python main_edge_gan.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --test_mode True --device cuda
+	# python main_edge_detect.py --data_path ../color_my_pytorch_slices/data/slices  --image_dim 128 --test_mode True --device cuda
+
+run_edge_gan:
+	python main_edge_gan.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --device cuda
+	# python main_edge_detect.py --data_path ../color_my_pytorch_slices/data/slices  --image_dim 128 --device cuda
+
+
+test_edge_detect_script:
 	python edge_detect_conv.py
