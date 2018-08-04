@@ -15,4 +15,9 @@ edge_log_dir/
 edge_test_outputs/
 edge_rand_outputs/
 edge_trained_models/
-edge_test_output_images/
+edge_gan_test_output_images/
+edge_gan_test_outputs/
+edge_gan_rand_outputs/
+edge_gan_trained_models/
+edge_gan_test_output_images/
+edge_gan_log_dir/
