@@ -144,10 +144,11 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			#print(edge_image_x.shape)
 			d_real = model_d(y)
 			d_fake = model_d(out)
-			d_loss_real = criterion(d_real, target_y)
 			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			d_loss_fake =  criterion(d_fake, target_x)
-			d_l = 	 d_loss_fake + d_loss_real
+			# d_loss_real = criterion(d_real, target_y)
+			# d_loss_fake =  criterion(d_fake, target_x)
+			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+			d_l = -(torch.mean(d_real) - torch.mean(d_fake)) 
 			d_loss = d_l + loss_edge
 			d_loss.backward()
 			optimizer_d.step()
@@ -158,8 +159,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			out = model_g(x)
 			d_fake = model_d(out)
 			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			g_loss = criterion(d_fake, target_y)
-			loss_G = 2.0 * g_loss + loss_edge
+			# g_loss = criterion(d_fake, target_y) # GAN Loss
+			g_loss = -torch.mean(d_fake) # Wasserstein G loss
+			loss_G =  g_loss + loss_edge
 			loss_G.backward()
 			optimizer_g.step()
 			# print('exiting.......')
@@ -167,9 +169,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item())
 			print(value)
-			# summary_writer.add_scalar("Edge Loss", loss.item())
-			summary_writer.add_scalar("Gen Loss", loss_G.item())
-			summary_writer.add_scalar("Disc Loss", d_loss.item())
+			summary_writer.add_scalar("Edge Loss", loss_edge.item())
+			summary_writer.add_scalar("Gen Loss", g_loss.item())
+			summary_writer.add_scalar("Disc Loss", d_l.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
@@ -330,11 +332,11 @@ def main():
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 5e-4	
+		learning_rate_gen = 4e-3	
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 5e-4	
+		learning_rate_disc = 3e-2	
 	
 
 	batch_size_train = 15
