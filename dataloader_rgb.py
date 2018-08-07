@@ -11,7 +11,8 @@ import time
 from itertools import cycle
 import sys
 from torch.utils.data.sampler import RandomSampler
-
+from skimage import  io
+import skimage
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color_slices/'
 SCAN_DIR = '/scan_slices/'
@@ -28,14 +29,19 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     base_dir = DATA_DIR + OUT_TYPE_DIR
     
     if color:
-        image = cv2.imread(base_dir + '/' + image)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image = cv2.imread(base_dir + '/' + image)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        image = io.imread(base_dir + '/' + image)
+
         # print('color:', image.dtype)
         # image = image.astype(np.int8)
         # image = image[:, :, 1:]  # keeping all the channels dropping the luminosity
     else:
-        image = cv2.imread(base_dir + '/' + image)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # image = cv2.imread(base_dir + '/' + image)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = io.imread(base_dir + '/' + image)
+        image = skimage.color.rgb2gray(image)
         # print('gray : ', image.dtype)
 
 

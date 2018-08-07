@@ -256,15 +256,17 @@ class ColorDecoderConvTrans(nn.Module):
         self.conv3 = nn.ConvTranspose2d(1024, 1024, 3, padding=1, stride=2, output_padding=1)
         self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
         self.conv5 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
-        self.conv6 = nn.Conv2d(256,	 128, 3, padding=1)
-        self.conv7 = nn.Conv2d(128, out_channels, 3, padding=1)
+        self.conv6 = nn.Conv2d(256,	 256, 3, padding=1)
+        self.conv7 = nn.Conv2d(256, 128, 3, padding=1)
+        self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
 
         self.bn1 = nn.BatchNorm2d(2048)
         self.bn2 = nn.BatchNorm2d(1024)
         self.bn3 = nn.BatchNorm2d(1024)
         self.bn4 = nn.BatchNorm2d(512)
         self.bn5 = nn.BatchNorm2d(256)
-        self.bn6 = nn.BatchNorm2d(128)
+        self.bn6 = nn.BatchNorm2d(256)
+        self.bn7 = nn.BatchNorm2d(128)
 
 
         for m in self.modules():
@@ -294,7 +296,9 @@ class ColorDecoderConvTrans(nn.Module):
 
         out = self.bn6(F.leaky_relu(self.conv6(out)))
 
-        out = F.leaky_relu(self.conv7(out))
+        out = self.bn7(F.leaky_relu(self.conv7(out)))
+
+        out = F.leaky_relu(self.conv8(out))
         #print('Conv4: ',  out.shape)
 
         return out

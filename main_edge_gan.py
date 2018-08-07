@@ -82,7 +82,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 250
+	draw_iter = 50
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 250
@@ -130,31 +130,32 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			
 			target_y = torch.ones(len(y)).to(device)
 			target_x = torch.zeros(len(y)).to(device)
-
+			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
 			x = x + torch.randn(x.shape) 
+			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
 			edge_image_x = x.repeat(1,3, 1, 1)
-
 			optimizer_g.zero_grad()
+
+			for i in range(random.randint(1,3)):
+				optimizer_d.zero_grad()
+				out = model_g(x)
+				#print(out.shape)
+				#print(edge_image_x.shape)
+				d_real = model_d(y)
+				d_fake = model_d(out)
+				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				# d_loss_real = criterion(d_real, target_y)
+				# d_loss_fake =  criterion(d_fake, target_x)
+				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				d_loss = d_l + loss_edge
+				d_loss.backward()
+				optimizer_d.step()
+			
 			optimizer_d.zero_grad()
-
-			out = model_g(x)
-			#print(out.shape)
-			#print(edge_image_x.shape)
-			d_real = model_d(y)
-			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			# d_loss_real = criterion(d_real, target_y)
-			# d_loss_fake =  criterion(d_fake, target_x)
-			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-			d_l = -(torch.mean(d_real) - torch.mean(d_fake)) 
-			d_loss = d_l + loss_edge
-			d_loss.backward()
-			optimizer_d.step()
-
 			optimizer_g.zero_grad()
-			optimizer_d.zero_grad()
 
 			out = model_g(x)
 			d_fake = model_d(out)
@@ -218,10 +219,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 	model.train_stat = False
 	test_losses = []
 	diffs_avg = []
-	# if not os.path.exists(EVAL_DIR + now):
-	# 	os.makedirs(RANDOM_OUTPUTS_DIR + now)
-	# edge_detector = Edge(False)
-	# criterion_edge = EdgeLoss(device)
+
 	with torch.no_grad():
 		for i, (name, x, y) in enumerate(test_loader):
 
@@ -257,27 +255,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
 			
 
-			## grid1 = make_grid(image, make_grid(out[j].cpu(), normalize=True, range=(0,1)), make_grid(g2[j], normalize=True, range=(0,1)), image_edge_out)
-			# grid1 = make_grid(g1,normalize=True, range=(0,1))
-			# grid2 = make_grid(g2, normalize=True, range=(0,1))
-			# grid3 = make_grid(out, normalize=True, range=(0,1)) 
-			# print(type(grid1[0]), print(grid1[0].shape	))
 			if args.test_mode:
 				print('show image')
-				# plt.imshow(grid, cmap='gray'); plt.show()
-
-			## grid_rgb = cv2.cvtColor(grid / 255.0, cv2.COLOR_GRAY2RGB)
-			# img = grid1[0].unsqueeze(2).cpu().numpy().astype(np.uint8)
-			# grid_rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-			# print('Image Dim', img.shape)
-			
-			# summary_writer.add_image("test image/" + 'cimg_' + str(epoch) +'_'+ str(batch_idx)+ '_' + str(j) + '_' + name[j], grid_rgb)
-			
-			# cv2.imwrite(file_name, grid1.cpu().numpy())
-
-			# with open(EVAL_DIR+now+'/order.txt', 'a') as f:
-			# 	val = "%d, %s\n" % (epoch, 'cimg_' + str(epoch)+ '_' + name[j])
-			# 	f.writelines(val)
 
 			if i !=0:
 				# break
