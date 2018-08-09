@@ -201,19 +201,19 @@ class Discriminator(nn.Module):
 		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
 		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
-		self.conv4 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
+		self.conv4 = nn.Conv2d(256, 256, 3, padding=1, stride=2)
 		
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
-		self.linear1 = nn.Linear(128 * int(dim/8) * int(dim/8), 100)
+		self.linear1 = nn.Linear(256 * int(dim/8) * int(dim/8), 1000)
 		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(100, 1)
+		self.linear3 = nn.Linear(1000, 1)
 
 		self.bn1 = nn.BatchNorm2d(1024)
 		self.bn2 = nn.BatchNorm2d(512)
 		self.bn3 = nn.BatchNorm2d(256)
-		self.bn4 = nn.BatchNorm2d(128) 
+		self.bn4 = nn.BatchNorm2d(256) 
 
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
