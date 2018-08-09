@@ -82,7 +82,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 50
+	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 250
@@ -110,7 +110,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 	
 	criterion = nn.BCELoss()
-
+	criterion_disc = nn.MSELoss()
 	if args.criterion_edge == 'grad'  :
 		criterion_edge = EdgeLoss(device)
 	elif args.criterion_edge == 'laplace' or args.criterion_edge is None:
@@ -131,54 +131,56 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			target_y = torch.ones(len(y)).to(device)
 			target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
-			x = x + torch.randn(x.shape) 
+			# x = x + torch.randn(x.shape) 
 			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
 			edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			for i in range(random.randint(1,3)):
+			for k in range(1):
 				optimizer_d.zero_grad()
 				out = model_g(x)
 				#print(out.shape)
 				#print(edge_image_x.shape)
-				d_real = model_d(y)
-				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# d_loss_real = criterion(d_real, target_y)
-				# d_loss_fake =  criterion(d_fake, target_x)
+				d_real = model_d(y).view(-1)
+				d_fake = model_d(out).view(-1)
+				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				d_loss_real = criterion_disc(d_real, target_y)
+				d_loss_fake =  criterion_disc(d_fake, target_x)
 				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-				d_loss = d_l + loss_edge
+				# d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				d_l = d_loss_fake + d_loss_real
+				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
-			
+				
 			optimizer_d.zero_grad()
 			optimizer_g.zero_grad()
 
 			out = model_g(x)
-			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			# g_loss = criterion(d_fake, target_y) # GAN Loss
-			g_loss = -torch.mean(d_fake) # Wasserstein G loss
-			loss_G =  g_loss + loss_edge
+			d_fake = model_d(out).view(-1)
+			# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+			g_loss = criterion_disc(d_fake, target_y) # GAN Loss
+			# g_loss = -torch.mean(d_fake) # Wasserstein G loss
+			loss_G =  g_loss
 			loss_G.backward()
 			optimizer_g.step()
 			# print('exiting.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item())
+			# value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item())
+			value = 'Iter : %d Batch: %d  G Loss: %.4f D Loss: %.4f\n'%(i, j, g_loss.item(), d_l.item())
 			print(value)
-			summary_writer.add_scalar("Edge Loss", loss_edge.item())
+			# summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
 			summary_writer.add_scalar("Disc Loss", d_l.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
 				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png', normalize=True)
-				save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
-				save_image(g2, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
+				# save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
+				# save_image(g2, RANDOM_OUTPUTS	_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
 				save_image(out, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png', normalize=True)
 				# draw_outputs(i, model, now, args.data_path, filenames, j)
 			
@@ -311,15 +313,15 @@ def main():
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 4e-3	
+		learning_rate_gen = 4e-4	
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-2	
+		learning_rate_disc = 3e-3
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 10
+	batch_size_test = 10
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
