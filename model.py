@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
+from torchvision import models
 class Encoder(nn.Module):
 
 	def __init__(self):
@@ -248,14 +248,16 @@ class ColorDecoderConvTrans(nn.Module):
     def __init__(self, out_channels=1):
 
         super(ColorDecoderConvTrans, self).__init__()
-        self.upsample1 = nn.Upsample(scale_factor=4)
+        self.upsample1 = nn.Upsample(scale_factor=2)
         self.upsample2 = nn.Upsample(scale_factor=2)
 
-        self.conv1 = nn.ConvTranspose2d(128, 2048, 3, padding=1, stride=2, output_padding=1)
+        self.conv1 = nn.ConvTranspose2d(512, 2048, 3, padding=1, stride=2, output_padding=1)
         self.conv2 = nn.Conv2d(2048, 1024, 3, padding=1)
         self.conv3 = nn.ConvTranspose2d(1024, 1024, 3, padding=1, stride=2, output_padding=1)
         self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
         self.conv5 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+        self.conv5_1 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
+        self.conv5_2 = nn.ConvTranspose2d(128, 128, 3, padding=1, stride=2, output_padding=1)
         self.conv6 = nn.Conv2d(256,	 256, 3, padding=1)
         self.conv7 = nn.Conv2d(256, 128, 3, padding=1)
         self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
@@ -265,6 +267,8 @@ class ColorDecoderConvTrans(nn.Module):
         self.bn3 = nn.BatchNorm2d(1024)
         self.bn4 = nn.BatchNorm2d(512)
         self.bn5 = nn.BatchNorm2d(256)
+        self.bn5_1 = nn.BatchNorm2d(256)
+        self.bn5_2 = nn.BatchNorm2d(128)
         self.bn6 = nn.BatchNorm2d(256)
         self.bn7 = nn.BatchNorm2d(128)
 
@@ -296,11 +300,15 @@ class ColorDecoderConvTrans(nn.Module):
 
         out = self.bn6(F.leaky_relu(self.conv6(out)))
 
+        out = self.bn5_1(F.leaky_relu(self.conv5_1(out)))
+        
         out = self.bn7(F.leaky_relu(self.conv7(out)))
-
+        
+        out = self.bn5_2(F.leaky_relu(self.conv5_2(out)))
+        
         out = F.leaky_relu(self.conv8(out))
         #print('Conv4: ',  out.shape)
-
+        # val  = input()
         return out
 
 
@@ -323,6 +331,59 @@ class AutoEncoder(nn.Module):
         out = self.decoder(out)
 
         return out
+
+class VGGModel(nn.Module):
+	def __init__(self, features, device):
+		super(VGGModel, self).__init__()
+		self.features = features
+		for m in self.modules():
+			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+				print('Initializing', m)
+				nn.init.xavier_normal_(m.weight)
+		self.deconv = ColorDecoderConvTrans(3).to(device)
+	def forward(self, x):
+		out = self.features(x)
+		out = self.deconv(out)
+		return out
+
+cfg = {
+    'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 
+          512, 512, 512, 512, 'M'],
+}
+
+def make_layers(cfg, batch_norm=True):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.LeakyReLU()]
+            else:
+                layers += [conv2d, nn.LeakyReLU()]
+            in_channels = v
+    return nn.Sequential(*layers)
+
+def vgg16():
+    """VGG 16-layer model (configuration "D")"""
+    return make_layers(cfg['E'])
+
+def getVGGModel(device):
+	return VGGModel(vgg16(),device)
+
+def test_vgg():
+  	vgg = VGGModel(vgg16())
+  	input_vector = torch.randn(1, 3, 128, 128)
+  	out = vgg(input_vector)
+  	print(out.shape)
+
+
+
 
 class Edge(nn.Module):
 	def __init__(self, cuda=True):

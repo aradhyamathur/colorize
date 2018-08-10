@@ -8,7 +8,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss
+from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, getVGGModel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
@@ -82,10 +82,10 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 50
+	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 250
+	test_iter = 150
 
 	if args.test_mode:
 		draw_iter = 1
@@ -110,7 +110,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 	
 	criterion = nn.BCELoss()
-
+	# criterion = nn.CrossEntropyLoss()
 	if args.criterion_edge == 'grad'  :
 		criterion_edge = EdgeLoss(device)
 	elif args.criterion_edge == 'laplace' or args.criterion_edge is None:
@@ -131,25 +131,30 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			target_y = torch.ones(len(y)).to(device)
 			target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
-			x = x + torch.randn(x.shape) 
+			x = x + torch.randn(x.shape)
+
 			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
-			edge_image_x = x.repeat(1,3, 1, 1)
+			# edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			for i in range(random.randint(1,3)):
+			for k in range(random.randint(1,3)):
 				optimizer_d.zero_grad()
 				out = model_g(x)
 				#print(out.shape)
 				#print(edge_image_x.shape)
 				d_real = model_d(y)
 				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# d_loss_real = criterion(d_real, target_y)
-				# d_loss_fake =  criterion(d_fake, target_x)
-				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				loss_edge, g1, g2 = criterion_edge(out, x)
+				d_loss_real = criterion(d_real, target_y)
+				d_loss_fake =  criterion(d_fake, target_x)
+				d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				# d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				if loss_edge > 100:
+					loss_edge *= 2.5
+				elif loss_edge > 50:
+					loss_edge *= 1.5
 				d_loss = d_l + loss_edge
 				d_loss.backward()
 				optimizer_d.step()
@@ -159,10 +164,10 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			out = model_g(x)
 			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			# g_loss = criterion(d_fake, target_y) # GAN Loss
-			g_loss = -torch.mean(d_fake) # Wasserstein G loss
-			loss_G =  g_loss + loss_edge
+			loss_edge, g1, g2 = criterion_edge(out, x)
+			g_loss = criterion(d_fake, target_y) # GAN Loss
+			# g_loss = -torch.mean(d_fake) # Wasserstein G loss
+			loss_G =  g_loss + 2.0*loss_edge
 			loss_G.backward()
 			optimizer_g.step()
 			# print('exiting.......')
@@ -228,7 +233,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			loss, g1, g2 = criterion_edge(out, x)
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
@@ -315,11 +320,11 @@ def main():
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-2	
+		learning_rate_disc = 4e-3	
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 10
+	batch_size_test = 10
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
@@ -330,7 +335,8 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = AutoEncoder(out_channels=3)
+	# generator = AutoEncoder(out_channels=3)
+	generator = getVGGModel(device)
 	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:
