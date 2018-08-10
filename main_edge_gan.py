@@ -117,8 +117,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.Adagrad(model_g.parameters(), lr=learning_rate_gen)
-	optimizer_d = optim.Adagrad(model_d.parameters(), lr=learning_rate_disc)
+	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen)
+	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc)
 	
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
@@ -127,7 +127,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			model_g.train()
 			model_d.train()
-			
+			# print(x.shape)
 			target_y = torch.ones(len(y)).to(device)
 			target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
@@ -150,7 +150,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# d_loss_fake =  criterion(d_fake, target_x)
 			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
 			d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-			d_loss = d_l + 2.0*loss_edge
+			d_loss = d_l + loss_edge
 			d_loss.backward()
 			optimizer_d.step()
 			
@@ -162,10 +162,10 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 			# g_loss = criterion(d_fake, target_y) # GAN Loss
 			g_loss = -torch.mean(d_fake) # Wasserstein G loss
-			loss_G =  g_loss + 1.5*loss_edge
+			loss_G =  g_loss + loss_edge
 			loss_G.backward()
 			optimizer_g.step()
-			# print('exiting.......')
+			# print('done.......')
 			# exit()
 
 			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item())
