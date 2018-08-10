@@ -82,7 +82,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 50
+	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 250
@@ -117,8 +117,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen)
-	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc)
+	optimizer_g = optim.Adagrad(model_g.parameters(), lr=learning_rate_gen)
+	optimizer_d = optim.Adagrad(model_d.parameters(), lr=learning_rate_disc)
 	
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
@@ -138,21 +138,21 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			for i in range(random.randint(1,3)):
-				optimizer_d.zero_grad()
-				out = model_g(x)
-				#print(out.shape)
-				#print(edge_image_x.shape)
-				d_real = model_d(y)
-				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# d_loss_real = criterion(d_real, target_y)
-				# d_loss_fake =  criterion(d_fake, target_x)
-				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-				d_loss = d_l + loss_edge
-				d_loss.backward()
-				optimizer_d.step()
+			# for i in range(random.randint(1,3)):
+			optimizer_d.zero_grad()
+			out = model_g(x)
+			#print(out.shape)
+			#print(edge_image_x.shape)
+			d_real = model_d(y)
+			d_fake = model_d(out)
+			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+			# d_loss_real = criterion(d_real, target_y)
+			# d_loss_fake =  criterion(d_fake, target_x)
+			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+			d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+			d_loss = d_l + 2.0*loss_edge
+			d_loss.backward()
+			optimizer_d.step()
 			
 			optimizer_d.zero_grad()
 			optimizer_g.zero_grad()
@@ -162,7 +162,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 			# g_loss = criterion(d_fake, target_y) # GAN Loss
 			g_loss = -torch.mean(d_fake) # Wasserstein G loss
-			loss_G =  g_loss + loss_edge
+			loss_G =  g_loss + 1.5*loss_edge
 			loss_G.backward()
 			optimizer_g.step()
 			# print('exiting.......')
@@ -318,8 +318,8 @@ def main():
 		learning_rate_disc = 3e-2	
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 10
+	batch_size_test = 10
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
