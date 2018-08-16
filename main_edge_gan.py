@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import make_grid, save_image
-
+from torchvision import transforms
 
 
 
@@ -85,7 +85,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 250
+	test_iter = 500
 
 	if args.test_mode:
 		draw_iter = 1
@@ -117,8 +117,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen)
-	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc)
+	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen)
+	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc)
 	
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
@@ -131,14 +131,20 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			target_y = torch.ones(len(y)).to(device)
 			target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
-			x = x + torch.randn(x.shape) 
+			# print(x.max())
+			# print(x.min())
+			# print(y.max(), y.min())
+			# save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png')
+			# save_image(y, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'y.png')
+			# exit()
+			# x = x + torch.randn(x.shape)*1e-2 
 			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
 			edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			# for i in range(random.randint(1,3)):
+			# for i in range(3):
 			optimizer_d.zero_grad()
 			out = model_g(x)
 			#print(out.shape)
@@ -150,25 +156,26 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# d_loss_fake =  criterion(d_fake, target_x)
 			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
 			d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-			d_loss = d_l + loss_edge
+			d_loss = d_l
 			d_loss.backward()
 			optimizer_d.step()
 			
 			optimizer_d.zero_grad()
-			optimizer_g.zero_grad()
+			for i in range(3):
+				optimizer_g.zero_grad()
 
-			out = model_g(x)
-			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			# g_loss = criterion(d_fake, target_y) # GAN Loss
-			g_loss = -torch.mean(d_fake) # Wasserstein G loss
-			loss_G =  g_loss + loss_edge
-			loss_G.backward()
-			optimizer_g.step()
+				out = model_g(x)
+				d_fake = model_d(out)
+				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				# g_loss = criterion(d_fake, target_y) # GAN Loss
+				g_loss = -torch.mean(d_fake) # Wasserstein G loss
+				loss_G =  g_loss + loss_edge * 1e-4
+				loss_G.backward()
+				optimizer_g.step()
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -176,10 +183,11 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
-				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png', normalize=True)
+				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png')
 				save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
 				save_image(g2, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
-				save_image(out, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png', normalize=True)
+				save_image(out, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png')
+				save_image(y, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'y.png')
 				# draw_outputs(i, model, now, args.data_path, filenames, j)
 			
 			if j % all_save_iter == 0:
@@ -311,11 +319,11 @@ def main():
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 4e-3	
+		learning_rate_gen = 3e-3	
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-2	
+		learning_rate_disc = 3e-5	
 	
 
 	batch_size_train = 10

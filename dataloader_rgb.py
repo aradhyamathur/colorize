@@ -13,12 +13,16 @@ import sys
 from torch.utils.data.sampler import RandomSampler
 from skimage import  io
 import skimage
+from skimage import util
+from skimage import img_as_float
+from torchvision import transforms
+
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color_slices/'
 SCAN_DIR = '/scan_slices/'
 
 
-
+transform = transforms.Compose([transforms.ToTensor()])
 def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     """Processes images in color volumes and converts to LAB color space
     :param: image_names : list of names of images
@@ -32,7 +36,7 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
         # image = cv2.imread(base_dir + '/' + image)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        image = io.imread(base_dir + '/' + image)
+        image = img_as_float(io.imread(base_dir + '/' + image))
 
         # print('color:', image.dtype)
         # image = image.astype(np.int8)
@@ -41,7 +45,8 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
         # image = cv2.imread(base_dir + '/' + image)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = io.imread(base_dir + '/' + image)
-        image = skimage.color.rgb2gray(image)
+        image = img_as_float(skimage.color.rgb2gray(image))
+        # image = util.invert(image)
         # print('gray : ', image.dtype)
 
 
@@ -70,15 +75,15 @@ class EfficientImageDataSet(Dataset):
         img_name = self.X[index]
         
         x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
-        x_processed = x_processed.unsqueeze(0)
         
+        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0).numpy()
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         # y_processed = y_processed.unsqueeze(0)
         
-        y_processed = y_processed.permute(2, 0, 1).numpy()
+        y_processed = y_processed.numpy()
 
-        return x_processed, y_processed
+        return transform(x_processed), transform(y_processed)
 
     
     def __len__(self):
@@ -96,15 +101,15 @@ class EfficientImageDataTestSet(Dataset):
         img_name = self.X[index]
         
         x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
-        x_processed = x_processed.unsqueeze(0)
+        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         
-        y_processed = y_processed.permute(2, 0, 1).numpy()
+        y_processed = y_processed.numpy()
         x_processed = x_processed.numpy()
         
-        return img_name, x_processed, y_processed
+        return img_name, transform(x_processed), transform(y_processed)
 
     
     def __len__(self):
