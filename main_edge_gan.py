@@ -161,7 +161,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			optimizer_d.step()
 			
 			optimizer_d.zero_grad()
-			for i in range(3):
+			for k in range(3):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
