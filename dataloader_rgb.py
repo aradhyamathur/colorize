@@ -83,7 +83,7 @@ class EfficientImageDataSet(Dataset):
         
         y_processed = y_processed.numpy()
 
-        return transform(x_processed), transform(y_processed)
+        return img_name, transform(x_processed), transform(y_processed)
 
     
     def __len__(self):

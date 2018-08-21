@@ -22,3 +22,4 @@ edge_gan_trained_models/
 edge_gan_test_output_images/
 edge_gan_log_dir/
 edge_test_output_images/
+demo*/
