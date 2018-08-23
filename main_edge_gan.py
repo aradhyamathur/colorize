@@ -8,7 +8,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss
+from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, getVGGModel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
@@ -153,7 +153,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
-			edge_image_x = x.repeat(1,3, 1, 1)
+			edge_image_x = x
 			optimizer_g.zero_grad()
 
 			# for i in range(3):
@@ -163,7 +163,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			#print(edge_image_x.shape)
 			d_real = model_d(y)
 			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+			loss_edge, g1, g2 = criterion_edge(out,x)
 			# d_loss_real = criterion(d_real, target_y)
 			# d_loss_fake =  criterion(d_fake, target_x)
 			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
@@ -253,7 +253,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			loss, g1, g2 = criterion_edge(out, x)
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
@@ -273,13 +273,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			image = x[j].squeeze(0).cpu().numpy()
 
-			file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
-			save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in.png', normalize=True)
-			save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out_lap.png', normalize=True)
-			save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in_lap.png', normalize=True)
-			save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
-			
-			save_batch_image_names(name, TEST_FILE, i, epoch)
+			if i % 100 == 0:
+				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
+				save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
+				save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out_lap.png', normalize=True)
+				save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in_lap.png', normalize=True)
+				save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out.png', normalize=True)
+				
+				save_batch_image_names(name, TEST_FILE, i, epoch)
 
 			if args.test_mode:
 				print('show image')
@@ -342,8 +343,8 @@ def main():
 		learning_rate_disc = 3e-5	
 	
 
-	batch_size_train = 9
-	batch_size_test = 9
+	batch_size_train = 15
+	batch_size_test = 15
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
@@ -354,7 +355,7 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = AutoEncoder(out_channels=3)
+	generator = getVGGModel(device)
 	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:

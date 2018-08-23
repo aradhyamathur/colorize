@@ -45,7 +45,9 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
         # image = cv2.imread(base_dir + '/' + image)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = io.imread(base_dir + '/' + image)
-        image = img_as_float(skimage.color.rgb2gray(image))
+        image = img_as_float(skimage.color.gray2rgb(image))
+        # print(image.shape)
+        # exit()
         # image = util.invert(image)
         # print('gray : ', image.dtype)
 
@@ -74,9 +76,9 @@ class EfficientImageDataSet(Dataset):
     def __getitem__(self, index):
         img_name = self.X[index]
         
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
+        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float().numpy()
         
-        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0).numpy()
+        # x_processed = x_processed.unsqueeze(0).permute(1, 2, 0).numpy()
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         # y_processed = y_processed.unsqueeze(0)
@@ -101,7 +103,7 @@ class EfficientImageDataTestSet(Dataset):
         img_name = self.X[index]
         
         x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
-        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0)
+        # x_processed = x_processed.unsqueeze(0).permute(1, 2, 0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
