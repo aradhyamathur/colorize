@@ -14,7 +14,7 @@ color_file_names = os.listdir(PREV_DATASET_DIR + COLOR_DIR)
 if len(scan_file_names)!= len(color_file_names):
 	raise Exception("Inconsistent file numbers")
 i = 0
-for scan, color in tqdm(zip(scan_file_names, color_file_names)):
+for i, (scan, color) in tqdm(enumerate(zip(scan_file_names, color_file_names))):
 	if scan != color:
 		raise Exception('Inconsistent file names')
 

@@ -41,20 +41,20 @@ class Encoder(nn.Module):
 		out = self.bn2(F.leaky_relu(self.conv2(out)))
 
 		# print('Conv2: ', out.shape)
-
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn3(F.leaky_relu(self.conv3(out)))
 
 		# print('Conv3: ', out.shape)
-
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn4(F.leaky_relu(self.conv4(out)))
 		# print('Conv4: ', out.shape)
-		
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn5(F.leaky_relu(self.conv5(out)))
 		# print('Conv5: ', out.shape)
-		
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn6(F.leaky_relu(self.conv6(out)))
 		# print('Conv6: ', out.shape)
-		
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn7(F.leaky_relu(self.conv7(out)))
 		# print('Conv7: ', out.shape)
 		return out
@@ -281,21 +281,24 @@ class ColorDecoderConvTrans(nn.Module):
         #print('Conv1 : ', out.shape)
 
         # out = self.upsample1(out)
-
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn2(F.leaky_relu(self.conv2(out)))
         #print('Conv2: ', out.shape)
 
         # out = self.upsample2(out)
-
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn3(F.leaky_relu(self.conv3(out)))
         #print('Conv3: ', out.shape)
-
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn4(F.leaky_relu(self.conv4(out)))
 
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn5(F.leaky_relu(self.conv5(out)))
 
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn6(F.leaky_relu(self.conv6(out)))
 
+        out = F.dropout2d(out, p=0.3, training=self.training)
         out = self.bn7(F.leaky_relu(self.conv7(out)))
 
         out = F.sigmoid(self.conv8(out))
