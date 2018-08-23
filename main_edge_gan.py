@@ -48,6 +48,11 @@ parser.add_argument("--custom_name", type=str, help='custom folder to save resul
 
 args = parser.parse_args()
 
+if not args.custom_name:
+	now = str(datetime.datetime.now()) + '/'
+else:
+	now = str(datetime.datetime.now()) + '_' + args.custom_name + '/'
+
 if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
 
@@ -66,6 +71,8 @@ SAVED_MODEL_DIR = './edge_gan_trained_models/'
 RANDOM_OUTPUTS_DIR = './edge_gan_rand_outputs/'
 EVAL_DIR = './edge_gan_test_outputs/'
 EVAL_IMG_DIR = './edge_gan_test_output_images/'
+TRAIN_FILE = RANDOM_OUTPUTS_DIR + now + '/'+ 'train_batch_info.txt'
+TEST_FILE = EVAL_IMG_DIR + now + '/' + 'test_batch_info.txt'
 
 if not os.path.exists(SAVED_MODEL_DIR):
 	os.makedirs(SAVED_MODEL_DIR)
@@ -97,7 +104,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	filenames = os.listdir(args.data_path + COLOR_DIR)
 	if not os.path.exists(RANDOM_OUTPUTS_DIR + now):
 		os.makedirs(RANDOM_OUTPUTS_DIR + now)
-
+	f = open(TRAIN_FILE,'w')
+	f.writelines('')
+	f.close()
 	if args.start_epoch:
 		start_epoch = args.start_epoch
 	else:start_epoch = 0
@@ -123,7 +132,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
-		for j, (x, y) in enumerate(train_dataloader):
+		for j, (name, x, y) in enumerate(train_dataloader):
 
 			model_g.train()
 			model_d.train()
@@ -183,6 +192,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
+				save_batch_image_names(name, TRAIN_FILE, j, i)
+
 				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png')
 				save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
 				save_image(g2, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
@@ -223,6 +234,11 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 	if not os.path.exists(EVAL_IMG_DIR + now):
 		os.makedirs(EVAL_IMG_DIR + now)
+	
+	f = open(TEST_FILE,'w')
+	f.writelines('')
+	f.close()
+	
 	model.eval()
 	model.train_stat = False
 	test_losses = []
@@ -256,12 +272,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			image = x[j].squeeze(0).cpu().numpy()
 
-			file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
-			save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in.png', normalize=True)
-			save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out_lap.png', normalize=True)
-			save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'in_lap.png', normalize=True)
-			save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_' + 'out.png', normalize=True)
-			
+			if i % 100 == 0:
+				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
+				save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
+				save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out_lap.png', normalize=True)
+				save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in_lap.png', normalize=True)
+				save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out.png', normalize=True)
+				
+				save_batch_image_names(name, TEST_FILE, i, epoch)
 
 			if args.test_mode:
 				print('show image')
@@ -279,10 +297,6 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 def main():
 	global summary_writer
 
-	if not args.custom_name:
-		now = str(datetime.datetime.now()) + '/'
-	else:
-		now = str(datetime.datetime.now()) + '_' + args.custom_name + '/'
 
 	cur_model_dir = SAVED_MODEL_DIR + now
 
