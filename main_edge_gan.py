@@ -178,7 +178,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# g_loss = criterion(d_fake, target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge * 1e-4
+				loss_G =  g_loss + loss_edge # * 1e-3
 				loss_G.backward()
 				optimizer_g.step()
 			# print('done.......')
@@ -340,8 +340,8 @@ def main():
 		learning_rate_disc = 3e-5	
 	
 
-	batch_size_train = 10
-	batch_size_test = 10
+	batch_size_train = 20
+	batch_size_test = 20
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
