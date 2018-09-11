@@ -126,8 +126,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen)
-	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc)
+	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001)
+	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001)
 	
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
@@ -340,8 +340,8 @@ def main():
 		learning_rate_disc = 3e-5	
 	
 
-	batch_size_train = 20
-	batch_size_test = 20
+	batch_size_train = 15
+	batch_size_test = 15
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
