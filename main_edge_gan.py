@@ -1,3 +1,4 @@
+
 # import matplotlib
 # matplotlib.use('Agg')
 import torch
@@ -48,10 +49,15 @@ parser.add_argument("--custom_name", type=str, help='custom folder to save resul
 
 args = parser.parse_args()
 
+now = str(datetime.datetime.now())
+
+if args.test_mode:
+	now += '_test_mode'
+
 if not args.custom_name:
-	now = str(datetime.datetime.now()) + '/'
+	now += '/'
 else:
-	now = str(datetime.datetime.now()) + '_' + args.custom_name + '/'
+	now+='_' + args.custom_name + '/'
 
 if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
@@ -92,7 +98,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 500
+	test_iter = 250
 
 	if args.test_mode:
 		draw_iter = 1
@@ -128,7 +134,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		raise Exception('ValueError: Illegal criterion specified')
 	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001)
 	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001)
-	
+	lowest = 0.0 
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
@@ -153,24 +159,24 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			# for i in range(3):
-			optimizer_d.zero_grad()
-			out = model_g(x)
-			#print(out.shape)
-			#print(edge_image_x.shape)
-			d_real = model_d(y)
-			d_fake = model_d(out)
-			loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-			# d_loss_real = criterion(d_real, target_y)
-			# d_loss_fake =  criterion(d_fake, target_x)
-			# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-			d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-			d_loss = d_l
-			d_loss.backward()
-			optimizer_d.step()
+			for i in range(1):
+				optimizer_d.zero_grad()
+				out = model_g(x)
+				#print(out.shape)
+				#print(edge_image_x.shape)
+				d_real = model_d(y)
+				d_fake = model_d(out)
+				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				# d_loss_real = criterion(d_real, target_y)
+				# d_loss_fake =  criterion(d_fake, target_x)
+				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				d_loss = d_l
+				d_loss.backward()
+				optimizer_d.step()
 			
 			optimizer_d.zero_grad()
-			for k in range(3):
+			for k in range(2):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
@@ -178,7 +184,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# g_loss = criterion(d_fake, target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge # * 1e-3
+				loss_G =  g_loss + 1e1*loss_edge # * 1e-3
+				if lowest > loss_G:
+					lowest = loss_G
 				loss_G.backward()
 				optimizer_g.step()
 			# print('done.......')
@@ -212,6 +220,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				print('SAVING MODEL')
 				torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
 				torch.save(model_d.state_dict(), cur_model_dir + 'colorize_disc_cur.pt')
+				if loss_G < lowest:
+					torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur_low.pt')
 				print('SAVED CURRENT')
 
 			if args.test_mode or (j % test_iter == 0 and j != 0) :
@@ -340,8 +350,8 @@ def main():
 		learning_rate_disc = 3e-5	
 	
 
-	batch_size_train = 15
-	batch_size_test = 15
+	batch_size_train = 20
+	batch_size_test = 20
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:

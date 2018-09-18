@@ -12,14 +12,14 @@ class Encoder(nn.Module):
 		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
-		self.conv5 = nn.Conv2d(256, 128, 3, padding=1)  
+		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
 		self.bn1 = nn.BatchNorm2d(1024)
 		self.bn2 = nn.BatchNorm2d(512)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(256)
-		self.bn5 = nn.BatchNorm2d(128)
+		self.bn5 = nn.BatchNorm2d(64)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -201,8 +201,8 @@ class Discriminator(nn.Module):
 		
 		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
 		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 128, 3, padding=1, stride=2)
-		self.conv4 = nn.Conv2d(128, 64, 3, padding=1, stride=2)
+		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
+		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
 		
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
@@ -213,7 +213,7 @@ class Discriminator(nn.Module):
 
 		self.bn1 = nn.BatchNorm2d(1024)
 		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(128)
+		self.bn3 = nn.BatchNorm2d(256)
 		self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():
@@ -252,22 +252,22 @@ class ColorDecoderConvTrans(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(128, 1024, 3, padding=1, stride=2, output_padding=1)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv1 = nn.ConvTranspose2d(64, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
 		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
+		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
 		# self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		self.conv7 = nn.Conv2d(256, 128, 3, padding=1)
-		self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
+		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
+		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
 
-		self.bn1 = nn.BatchNorm2d(1024)
-		self.bn2 = nn.BatchNorm2d(512)
+		self.bn1 = nn.BatchNorm2d(512)
+		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
-		self.bn4 = nn.BatchNorm2d(256)
+		self.bn4 = nn.BatchNorm2d(128)
 		# self.bn5 = nn.BatchNorm2d(256)
 		# self.bn6 = nn.BatchNorm2d(256)
-		self.bn7 = nn.BatchNorm2d(128)
+		self.bn7 = nn.BatchNorm2d(64)
 
 
 		for m in self.modules():
@@ -416,7 +416,7 @@ class EdgeLossLaplace3CHANNEL(nn.Module):
 
 	def __init__(self, device):
 		super(EdgeLossLaplace3CHANNEL, self).__init__()
-		lap_filter = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
+		lap_filter = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
 		# print('lap1', lap_filter.shape)
 
 		lap_filter = np.array([[lap_filter, lap_filter, lap_filter]])
@@ -450,9 +450,9 @@ def test_net():
 	tensor = torch.randn(32, 1, 128, 128)
 	
 	if CUDA :
-		autoencoder = autoencoder.cuda()
-		tensor = tensor.cuda()
-		discriminator = discriminator.cuda()
+		autoencoder = autoencoder.to(torch.device("cuda"))
+		tensor = tensor.to(torch.device("cuda"))
+		discriminator = discriminator.to(torch.device("cuda"))
 		val = input()
 	 
 	out_l = autoencoder(tensor)
