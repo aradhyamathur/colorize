@@ -132,8 +132,11 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossLaplace3CHANNEL(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001)
-	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001)
+	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # wgan 
+	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # wgan
+
+	# optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # normgan
+	# optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # normgan
 	lowest = 0.0 
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
 	# print(type(criterion_edge))
@@ -143,8 +146,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			model_g.train()
 			model_d.train()
 			# print(x.shape)
-			target_y = torch.ones(len(y)).to(device)
-			target_x = torch.zeros(len(y)).to(device)
+			# target_y = torch.ones(len(y)).to(device)
+			# target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
 			# print(x.max())
 			# print(x.min())
@@ -159,43 +162,46 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
-			for i in range(1):
+			for k in range(1):
 				optimizer_d.zero_grad()
 				out = model_g(x)
 				#print(out.shape)
 				#print(edge_image_x.shape)
 				d_real = model_d(y)
 				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# d_loss_real = criterion(d_real, target_y)
-				# d_loss_fake =  criterion(d_fake, target_x)
+				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				# d_loss_real = criterion(d_real.squeeze(1), target_y)
+				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
 				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
-			
+
+			for p in model_d.parameters():
+				p.data.clamp_(-5.0, 5.0)
 			optimizer_d.zero_grad()
-			for k in range(2):
+			for k in range(1):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# g_loss = criterion(d_fake, target_y) # GAN Loss
+				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 1e1*loss_edge # * 1e-3
-				if lowest > loss_G:
-					lowest = loss_G
+				loss_G =  g_loss + loss_edge # * 1e-3
+				# if lowest > loss_G:
+				# 	lowest = loss_G
 				loss_G.backward()
 				optimizer_g.step()
 			# print('done.......')
 			# exit()
 
 			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
-			print(value)
+			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
+			summary_writer.add_scalar("Gen Loss Total", loss_G.item())
 			summary_writer.add_scalar("Disc Loss", d_l.item())
 
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
@@ -220,8 +226,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				print('SAVING MODEL')
 				torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
 				torch.save(model_d.state_dict(), cur_model_dir + 'colorize_disc_cur.pt')
-				if loss_G < lowest:
-					torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur_low.pt')
+				# if loss_G < lowest:
+				# 	torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur_low.pt')
 				print('SAVED CURRENT')
 
 			if args.test_mode or (j % test_iter == 0 and j != 0) :
@@ -339,19 +345,20 @@ def main():
 	if args.learning_rate_edge:
 		learning_rate_edge = args.learning_rate_edge
 	else:
-		learning_rate_edge = 5e-4	
+		learning_rate_edge = 5e-4
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 3e-3	
+		learning_rate_gen = 3e-3
+		# learning_rate_gen = 3e-3
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-5	
+		learning_rate_disc = 3e-5
 	
 
-	batch_size_train = 20
-	batch_size_test = 20
+	batch_size_train = 25
+	batch_size_test = 25
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
@@ -362,8 +369,8 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = AutoEncoder(out_channels=3)
-	discriminator = Discriminator(128, 3)
+	generator = nn.DataParallel(AutoEncoder(out_channels=3))
+	discriminator = nn.DataParallel(Discriminator(128, 3))
 
 	if args.load_prev_model_gen:
 		generator.load_state_dict(torch.load(args.load_prev_model_gen))

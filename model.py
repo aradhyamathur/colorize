@@ -241,7 +241,8 @@ class Discriminator(nn.Module):
 		out = self.dropout1(out)
 		# out = F.relu(self.linear2(out))
 		# out = self.dropout2(out)
-		out = F.leaky_relu(self.linear3(out))
+		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
+		# out = F.sigmoid(self.linear3(out))
 		return out
 
 class ColorDecoderConvTrans(nn.Module):
@@ -416,7 +417,7 @@ class EdgeLossLaplace3CHANNEL(nn.Module):
 
 	def __init__(self, device):
 		super(EdgeLossLaplace3CHANNEL, self).__init__()
-		lap_filter = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+		lap_filter = np.array([[0, -1, 0], [-1, 4, -1], [0, -1, 0]])
 		# print('lap1', lap_filter.shape)
 
 		lap_filter = np.array([[lap_filter, lap_filter, lap_filter]])
