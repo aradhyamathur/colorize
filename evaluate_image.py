@@ -8,11 +8,13 @@ from skimage import io
 from torchvision import transforms
 from skimage import img_as_float
 from shutil import copyfile
+from skimage.transform import rescale
 parser = argparse.ArgumentParser()
 parser.add_argument('--load_prev_model_gen', help="model path")
 parser.add_argument('--input_dir', help="input image directory")
 parser.add_argument('--color_dir', help='colr image directory')
 parser.add_argument('--custom_name', nargs="?", help='custom name')
+parser.add_argument('--image_scale', nargs="?", type=float)
 DEMO_DIR = './demo2/'
 
 
@@ -52,6 +54,8 @@ for i, img in enumerate(images):
 		print(i, img.split('.'))
 		# exit()
 		image = io.imread(args.input_dir + img)
+		if args.image_scale:
+			image = rescale(image, args.image_scale)
 		image = img_as_float(skimage.color.rgb2gray(image))
 		t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
 		# print(t_img.shape)

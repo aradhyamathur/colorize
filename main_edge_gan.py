@@ -95,7 +95,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 10
+	draw_iter = 100
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 250
@@ -179,7 +179,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-5.0, 5.0)
+				p.data.clamp_(-3.0, 3.0)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -189,7 +189,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge # * 1e-3
+				loss_G =  g_loss + 5.0 * loss_edge # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
