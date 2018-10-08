@@ -46,6 +46,7 @@ parser.add_argument("--test_mode", type=bool, help="run in test mode")
 parser.add_argument("--device", nargs='?', const='cuda', type=str) 
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
+parser.add_argument("--description", type=str, help='training description')
 
 args = parser.parse_args()
 
@@ -63,7 +64,7 @@ if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
 
 
-LOG_DIR = './edge_gan_log_dir/'
+LOG_DIR = './edge_cgan_log_dir/'
 
 np.set_printoptions(threshold=np.nan)
 
@@ -73,10 +74,10 @@ if not args.device:
 else:
 	device = torch.device(args.device)
 
-SAVED_MODEL_DIR = './edge_gan_trained_models/'
-RANDOM_OUTPUTS_DIR = './edge_gan_rand_outputs/'
-EVAL_DIR = './edge_gan_test_outputs/'
-EVAL_IMG_DIR = './edge_gan_test_output_images/'
+SAVED_MODEL_DIR = './edge_cgan_trained_models/'
+RANDOM_OUTPUTS_DIR = './edge_cgan_rand_outputs/'
+EVAL_DIR = './edge_cgan_test_outputs/'
+EVAL_IMG_DIR = './edge_cgan_test_output_images/'
 TRAIN_FILE = RANDOM_OUTPUTS_DIR + now + '/'+ 'train_batch_info.txt'
 TEST_FILE = EVAL_IMG_DIR + now + '/' + 'test_batch_info.txt'
 
@@ -138,7 +139,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	# optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # normgan
 	# optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # normgan
 	lowest = 0.0 
-	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
+
+	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d, args.description) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
 		for j, (name, x, y) in enumerate(train_dataloader):
@@ -159,7 +161,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# x = x + noise
 			x = x.to(device)
 			y = y.to(device)
-			edge_image_x = x.repeat(1,3, 1, 1)
+			edge_image_x = x[:,0,:,:].unsqueeze(1).repeat(1, 3, 1, 1)
 			optimizer_g.zero_grad()
 
 			for k in range(1):
@@ -172,7 +174,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
-				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				# d_l =  d_loss_fake + d_loss_real #GAN LOSS
 				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
@@ -186,10 +188,13 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				out = model_g(x)
 				d_fake = model_d(out)
+				# print(out.shape)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 5.0 * loss_edge # * 1e-3
+				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				tv_loss = 1e-8*tv_loss
+				loss_G =  g_loss + loss_edge # + tv_loss# * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -197,18 +202,19 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
 			summary_writer.add_scalar("Gen Loss Total", loss_G.item())
 			summary_writer.add_scalar("Disc Loss", d_l.item())
-
+			summary_writer.add_scalar("Total variation loss", tv_loss.item())
+			
 			update_readings(cur_model_dir + 'train_loss_batch.txt', value)
 			if j % draw_iter == 0:
 				save_batch_image_names(name, TRAIN_FILE, j, i)
 
-				save_image(x, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png')
+				save_image(x[:,0,:,:].unsqueeze(1), RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in.png')
 				save_image(g1, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'out_lap.png', normalize=True)
 				save_image(g2, RANDOM_OUTPUTS_DIR + now + 'cimg_' + str(i) +'_'+ str(j) + '_' + 'in_lap.png', normalize=True)
 				save_image(out, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'out.png')
@@ -268,7 +274,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			loss, g1, g2 = criterion_edge(out, x[:,0,:,:].unsqueeze(1).repeat(1, 3, 1, 1))
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Loss %.4f'%(i, loss.item()))
 
@@ -290,11 +296,11 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			if i % 100 == 0:
 				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
-				save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
+				save_image(x[:,0,:,:].unsqueeze(1), EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
 				save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out_lap.png', normalize=True)
 				save_image(g2, EVAL_IMG_DIR +  now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in_lap.png', normalize=True)
 				save_image(out, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out.png', normalize=True)
-				
+				save_image(y, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'gt.png', normalize=True)
 				save_batch_image_names(name, TEST_FILE, i, epoch)
 
 			if args.test_mode:
@@ -375,7 +381,7 @@ def main():
 	if args.load_prev_model_gen:
 		generator.load_state_dict(torch.load(args.load_prev_model_gen))
 		print('loaded generator successfully')
-	if args.load_prev_model_disc:	
+	if args.load_prev_model_disc:
 		generator.load_state_dict(torch.load(args.load_prev_model_disc))
 		print('loaded discriminator successfully')
 

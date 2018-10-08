@@ -22,7 +22,7 @@ def normalize(image):
 # 	img_grid = np.concatenate((gray_img, ae_img, edge_img_in, edge_img_out), axis=1)
 # 	return img_grid
 
-def save_model_info(model_g, model_d,learning_rate_gen, learning_rate_disc, DIR, epoch_start, epoch_end, learning_rate_ae, optimizer_gen, optimizer_disc):
+def save_model_info(model_g, model_d,learning_rate_gen, learning_rate_disc, DIR, epoch_start, epoch_end, learning_rate_ae, optimizer_gen, optimizer_disc, description):
 	f = open(DIR + "model_info.txt", 'a')
 	model_info = 'GEN : \n' + str(model_g) + '\n' + 'Disc :\n' + str(model_d) + '\n'
 	metrics = 'Epoch start : {}, epoch end: {}, learning_rate_gen : {}, learning_rate_disc : {}\n'.format(str(epoch_start), str(epoch_end), str(learning_rate_gen),str(learning_rate_disc)) + '\n'
@@ -32,6 +32,8 @@ def save_model_info(model_g, model_d,learning_rate_gen, learning_rate_disc, DIR,
 	f.writelines(metrics)
 	f.writelines(optimizer_gen_str)
 	f.writelines(optimizer_disc_str)
+	if description is not None:
+		f.writelines(description + '\n')
 	f.close()
 
 
