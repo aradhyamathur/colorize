@@ -74,13 +74,12 @@ class EfficientImageDataSet(Dataset):
     def __getitem__(self, index):
         img_name = self.X[index]
         
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
-        
-        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0).numpy()
-        
+        x_processed = transform(np.expand_dims(process_images(self.DATA_DIR, img_name, SCAN_DIR, False), axis=-1)).float()
+        random_vec = torch.randn(128, 128).unsqueeze(0)
+        x_processed = torch.cat((x_processed, random_vec), 0)
+        x_processed = x_processed.permute(1, 2, 0).numpy()
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
         # y_processed = y_processed.unsqueeze(0)
-        
         y_processed = y_processed.numpy()
 
         return img_name, transform(x_processed), transform(y_processed)
@@ -100,8 +99,12 @@ class EfficientImageDataTestSet(Dataset):
     def __getitem__(self, index):
         img_name = self.X[index]
         
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
-        x_processed = x_processed.unsqueeze(0).permute(1, 2, 0)
+        x_processed = transform(np.expand_dims(process_images(self.DATA_DIR, img_name, SCAN_DIR, False), axis=-1)).float()
+        # print(x_processed.shape)
+        random_vec = torch.randn(128, 128).unsqueeze(0)
+        # print(random_vec.shape)
+        x_processed = torch.cat((x_processed, random_vec), 0)
+        x_processed = x_processed.permute(1, 2, 0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
@@ -109,7 +112,7 @@ class EfficientImageDataTestSet(Dataset):
         y_processed = y_processed.numpy()
         x_processed = x_processed.numpy()
         
-        return img_name, transform(x_processed), transform(y_processed)
+        return img_name, x_processed, transform(y_processed)
 
     
     def __len__(self):
@@ -144,19 +147,20 @@ if __name__ == '__main__':
     print('y  test :', y_test.shape)
 
     try_dataloader = create_dataloader(data_dir, X_train, y_train,  2)
-    for x, y in cycle(try_dataloader):
+    for name, x, y in cycle(try_dataloader):
         print(x.shape)
         print(y.shape)
+        ipdb.set_trace()
         # print(y[1].shape)
         # print('L channel ', y[:,0,:,:].unsqueeze(1).shape)
         # print('AB channel', y[:,1:,:,:].shape)
         break
     try_dataloader = create_dataloader(data_dir, X_test, y_test)
-    for x, y in try_dataloader:
-        print(x.shape)
-        print(y.shape)
-        # print(y[1].shape)
-        break
+    # for name, x, y in try_dataloader:
+    #     print(x.shape)
+    #     print(y.shape)
+    #     # print(y[1].shape)
+    #     break
     try_dataloader = create_testdataloader(data_dir, X_test, y_test, 15)
     for i, (name, x, y) in enumerate(try_dataloader):
         print(i)
