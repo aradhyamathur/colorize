@@ -15,7 +15,7 @@ parser.add_argument('--input_dir', help="input image directory")
 parser.add_argument('--color_dir', help='colr image directory')
 parser.add_argument('--custom_name', nargs="?", help='custom name')
 parser.add_argument('--image_scale', nargs="?", type=float)
-DEMO_DIR = './demo2/'
+DEMO_DIR = './cgan_demo2/'
 
 
 if not os.path.exists(DEMO_DIR):
@@ -54,18 +54,32 @@ for i, img in enumerate(images):
 		print(i, img.split('.'))
 		# exit()
 		image = io.imread(args.input_dir + img)
+		color_image = io.imread(args.color_dir + img)
+		scan_image = io.imread(args.input_dir+img)
+		scan_image = skimage.color.gray2rgb(scan_image)
 		if args.image_scale:
 			image = rescale(image, args.image_scale)
+			scan_image = rescale(scan_image, args.image_scale)
+			color_image = rescale(color_image, args.image_scale)
 		image = img_as_float(skimage.color.rgb2gray(image))
-		t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
+		img_tensor = torch.from_numpy(image).float().unsqueeze(0)
+		random_vec = torch.randn(*img_tensor.shape)
+		# print(img_tensor.shape)
+		# print(random_vec.shape)
+		img_tensor = torch.cat((img_tensor, random_vec), 0)
+		t_img = trans(img_tensor.numpy()).permute(1,0,2).unsqueeze(0).to(device)
 		# print(t_img.shape)
 
 		# exit()
 		with torch.no_grad():
 			out = gen(t_img)
 
-		out_img = out.squeeze(0).permute(1,2,0).cpu().numpy()
+		out_img = out.squeeze(0).permute(2,1,0).cpu().numpy()
 		io.imsave( DEMO_DIR + model_name+ '/' + img, out_img)
-		copyfile(args.color_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_color.png')
-		copyfile(args.input_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_scan.png')
+		io.imsave(DEMO_DIR + model_name + '/' + img.split('.')[0] + '_color.png', color_image)
+		io.imsave(DEMO_DIR + model_name + '/' + img.split('.')[0] + '_scan.png', scan_image)
+
+		# copyfile(args.color_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_color.png')
+		# copyfile(args.input_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_scan.png')
+		# exit()
 	# break

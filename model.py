@@ -8,14 +8,14 @@ class Encoder(nn.Module):
 	def __init__(self):
 
 		super(Encoder, self).__init__()
-		self.conv1 = nn.Conv2d(2, 1024, 3, padding=1, stride=2)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv1 = nn.Conv2d(2, 512, 3, padding=1, stride=2)
+		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
 		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
-		self.bn1 = nn.BatchNorm2d(1024)
+		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(512)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(256)
