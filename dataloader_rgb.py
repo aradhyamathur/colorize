@@ -104,7 +104,7 @@ class EfficientImageDataTestSet(Dataset):
         random_vec = torch.randn(128, 128).unsqueeze(0)
         # print(random_vec.shape)
         x_processed = torch.cat((x_processed, random_vec), 0)
-        x_processed = x_processed.permute(1, 2, 0)
+        # x_processed = x_processed.permute(1, 2, 0)
         
         
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
