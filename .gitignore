@@ -23,3 +23,10 @@ edge_gan_test_output_images/
 edge_gan_log_dir/
 edge_test_output_images/
 demo*
+cgan_demo2/
+edge_cgan_log_dir/
+edge_cgan_rand_outputs/
+edge_cgan_test_output_images/
+edge_cgan_trained_models/
+single_demo/
+t_images/

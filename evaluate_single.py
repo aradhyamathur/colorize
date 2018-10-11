@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from model import AutoEncoder
 import argparse
 import os
@@ -6,11 +7,13 @@ import skimage
 from skimage import io
 from torchvision import transforms
 from skimage import img_as_float
+from skimage.transform import rescale
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--load_prev_model_gen', help="model path")
 parser.add_argument('--image', help="path")
 parser.add_argument('--image_name', help="name")
+parser.add_argument('--image_scale', nargs="?", type=float)
 # parser.add_argument('--input_dir', help="input image directory")
 
 DEMO_DIR = './single_demo/'
@@ -28,7 +31,7 @@ device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # device = torch.device(args.device)
 
 
-gen = AutoEncoder(out_channels=3)
+gen = nn.DataParallel(AutoEncoder(out_channels=3))
 gen.load_state_dict(torch.load(args.load_prev_model_gen))
 
 gen = gen.to(device)
@@ -40,6 +43,8 @@ gen.eval()
     # print(i, img)
     # exit()
 image = io.imread(args.image)
+if args.image_scale:
+    image = rescale(image, args.image_scale)
 image = img_as_float(skimage.color.rgb2gray(image))
 t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
 # print(t_img.shape)
@@ -49,5 +54,5 @@ with torch.no_grad():
     out = gen(t_img)
 
 out_img = out.squeeze(0).permute(1,2,0).cpu().numpy()
-io.imsave( DEMO_DIR + args.image_name, out_img)
+io.imsave( DEMO_DIR + args.image_name.split('/')[-1], out_img)
     # break

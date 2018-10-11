@@ -46,7 +46,7 @@ parser.add_argument("--test_mode", type=bool, help="run in test mode")
 parser.add_argument("--device", nargs='?', const='cuda', type=str) 
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
-
+parser.add_argument("--description", type=str, help='training description')
 args = parser.parse_args()
 
 now = str(datetime.datetime.now())
@@ -138,7 +138,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	# optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # normgan
 	# optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # normgan
 	lowest = 0.0 
-	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d) # to be changed
+	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d, args.description) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
 		for j, (name, x, y) in enumerate(train_dataloader):
@@ -187,9 +187,12 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				tv_loss = 1e-6*tv_loss
+
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 5.0 * loss_edge # * 1e-3
+				loss_G =  g_loss + loss_edge + tv_loss # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -197,7 +200,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -269,8 +272,10 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
 			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+			tv_loss = 1e-6*tv_loss
 			# loss = F.mse_loss(out, x_in)
-			print('Test batch %d Loss %.4f'%(i, loss.item()))
+			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), tv_loss.item()))
 
 			test_losses.append(loss.item())
 
