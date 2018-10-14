@@ -362,8 +362,8 @@ def main():
 		learning_rate_disc = 3e-5
 	
 
-	batch_size_train = 25
-	batch_size_test = 25
+	batch_size_train = 35
+	batch_size_test = 35
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
