@@ -30,3 +30,6 @@ edge_cgan_trained_models/
 edge_cgan_test_output_images/
 edge_cgan_log_dir/
 cgan_demo2/
+
+single_demo/
+t_images/
