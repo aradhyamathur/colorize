@@ -9,7 +9,7 @@ class Encoder(nn.Module):
 
 		super(Encoder, self).__init__()
 		self.conv1 = nn.Conv2d(2, 512, 3, padding=1, stride=2)
-		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
 		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
@@ -38,7 +38,7 @@ class Encoder(nn.Module):
 
 		# print('Conv1:', out.shape)
 
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		# out = self.bn2(F.leaky_relu(self.conv2(out)))
 
 		# print('Conv2: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
