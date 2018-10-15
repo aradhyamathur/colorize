@@ -139,7 +139,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	# optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # normgan
 	# optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # normgan
 	lowest = 0.0 
-
+	g_iters = 1
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d, args.description) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
@@ -182,8 +182,10 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 			for p in model_d.parameters():
 				p.data.clamp_(-3.0, 3.0)
+			
 			optimizer_d.zero_grad()
-			for k in range(1):
+			
+			for k in range(g_iters):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
@@ -193,15 +195,18 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
 				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-				tv_loss = 1e-8*tv_loss
-				loss_G =  g_loss + loss_edge # + tv_loss# * 1e-3
+				tv_loss = 1e-6*tv_loss
+				loss_G =  g_loss + loss_edge  + tv_loss# * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
 				optimizer_g.step()
 			# print('done.......')
 			# exit()
-
+			if abs(abs(loss_G) - abs(d_loss)) > 300:
+				g_iters = 3
+			else:
+				g_iters = 1
 			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
