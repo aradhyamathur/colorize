@@ -75,7 +75,7 @@ class EfficientImageDataSet(Dataset):
         img_name = self.X[index]
         
         x_processed = transform(np.expand_dims(process_images(self.DATA_DIR, img_name, SCAN_DIR, False), axis=-1)).float()
-        random_vec = torch.randn(128, 128).unsqueeze(0)
+        random_vec = torch.rand(128, 128).unsqueeze(0)
         x_processed = torch.cat((x_processed, random_vec), 0)
         x_processed = x_processed.permute(1, 2, 0).numpy()
         y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
@@ -101,7 +101,7 @@ class EfficientImageDataTestSet(Dataset):
         
         x_processed = transform(np.expand_dims(process_images(self.DATA_DIR, img_name, SCAN_DIR, False), axis=-1)).float()
         # print(x_processed.shape)
-        random_vec = torch.randn(128, 128).unsqueeze(0)
+        random_vec = torch.rand(128, 128).unsqueeze(0)
         # print(random_vec.shape)
         x_processed = torch.cat((x_processed, random_vec), 0)
         # x_processed = x_processed.permute(1, 2, 0)

@@ -9,14 +9,14 @@ class Encoder(nn.Module):
 
 		super(Encoder, self).__init__()
 		self.conv1 = nn.Conv2d(2, 512, 3, padding=1, stride=2)
-		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		# self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
 		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
 		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(512)
+		# self.bn2 = nn.BatchNorm2d(512)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(256)
 		self.bn5 = nn.BatchNorm2d(64)
@@ -69,8 +69,8 @@ class Discriminator(nn.Module):
 
 		super(Discriminator, self).__init__()
 		
-		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv1 = nn.Conv2d(in_channels, 512, 3, padding=1,stride=2)
+		# self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
 		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
 		
@@ -81,8 +81,8 @@ class Discriminator(nn.Module):
 		# self.linear2 = nn.Linear(100, 50)
 		self.linear3 = nn.Linear(100, 1)
 
-		self.bn1 = nn.BatchNorm2d(1024)
-		self.bn2 = nn.BatchNorm2d(512)
+		self.bn1 = nn.BatchNorm2d(512)
+		# self.bn2 = nn.BatchNorm2d(512)
 		self.bn3 = nn.BatchNorm2d(256)
 		self.bn4 = nn.BatchNorm2d(64) 
 
@@ -97,7 +97,7 @@ class Discriminator(nn.Module):
 
 		out = self.bn1(F.leaky_relu(self.conv1(x)))
 		# print(out.shape)
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		# out = self.bn2(F.leaky_relu(self.conv2(out)))
 		# print(out.shape)
 		out = self.bn3(F.leaky_relu(self.conv3(out)))
 		# print(out.shape)
@@ -317,7 +317,7 @@ def test_net():
 	discriminator = Discriminator(128, 3)
 	print('Autoencoder Params', count_parameters(autoencoder))
 	print('Discriminator Params', count_parameters(discriminator))
-	tensor = torch.randn(1, 2, 128, 128)
+	tensor = torch.randn(25, 2, 128, 128)
 	
 	if CUDA :
 		autoencoder = autoencoder.to(torch.device("cuda"))

@@ -181,7 +181,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-3.0, 3.0)
+				p.data.clamp_(-1.0, 1.0)
 			
 			optimizer_d.zero_grad()
 			
@@ -203,10 +203,10 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_g.step()
 			# print('done.......')
 			# exit()
-			if abs(abs(loss_G) - abs(d_loss)) > 300:
-				g_iters = 3
-			else:
-				g_iters = 1
+			# if abs(abs(loss_G) - abs(d_loss)) > 300:
+			# 	g_iters = 3
+			# else:
+			# 	g_iters = 1
 			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
@@ -368,8 +368,8 @@ def main():
 		learning_rate_disc = 3e-5
 	
 
-	batch_size_train = 35
-	batch_size_test = 35
+	batch_size_train = 40
+	batch_size_test = 40
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
