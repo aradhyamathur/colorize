@@ -90,6 +90,27 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
+def calc_gradient_penalty(netD, real_data, fake_data):
+    #print real_data.size()
+    alpha = torch.rand(BATCH_SIZE, 1)
+    alpha = alpha.expand(real_data.size())
+    alpha = alpha.cuda(gpu) if use_cuda else alpha
+
+    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+
+    if use_cuda:
+        interpolates = interpolates.cuda(gpu)
+    interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+    disc_interpolates = netD(interpolates)
+
+    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).cuda(gpu) if use_cuda else torch.ones(
+                                  disc_interpolates.size()),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+    return gradient_penalty
 
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
@@ -159,11 +180,11 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# exit()
 			# x = x + torch.randn(x.shape)*1e-2 
 			# x = x + noise
-			x = x.to(device)
+			x = x.to(device).permute(0, 3, 1, 2)
 			y = y.to(device)
 			edge_image_x = x[:,0,:,:].unsqueeze(1).repeat(1, 3, 1, 1)
 			optimizer_g.zero_grad()
-
+			print(x.shape)
 			for k in range(1):
 				optimizer_d.zero_grad()
 				out = model_g(x)
@@ -171,17 +192,19 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				#print(edge_image_x.shape)
 				d_real = model_d(y)
 				d_fake = model_d(out)
+				grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
+				# grad_penalty.backward()
 				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l =  d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  + grad_penalty # wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-1.0, 1.0)
+				p.data.clamp_(-0.1, 0.1)
 			
 			optimizer_d.zero_grad()
 			
@@ -368,8 +391,8 @@ def main():
 		learning_rate_disc = 3e-5
 	
 
-	batch_size_train = 40
-	batch_size_test = 40
+	batch_size_train = 45
+	batch_size_test = 45
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
