@@ -192,7 +192,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			y = y.to(device)
 			edge_image_x = x[:,0,:,:].unsqueeze(1).repeat(1, 3, 1, 1)
 			optimizer_g.zero_grad()
-			print(x.shape)
+			# print(x.shape)
 			for k in range(1):
 				optimizer_d.zero_grad()
 				out = model_g(x)
@@ -212,7 +212,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-0.1, 0.1)
+				p.data.clamp_(-1.0, 1.0)
 			
 			optimizer_d.zero_grad()
 			
