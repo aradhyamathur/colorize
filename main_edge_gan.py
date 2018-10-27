@@ -25,7 +25,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import make_grid, save_image
 from torchvision import transforms
-
+from torch import autograd
 
 
 
@@ -47,7 +47,7 @@ parser.add_argument("--device", nargs='?', const='cuda', type=str)
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
 parser.add_argument("--description", type=str, help='training description')
-
+parser.add_argument("--batch_size", nargs='?', type=int) 
 args = parser.parse_args()
 
 now = str(datetime.datetime.now())
@@ -90,22 +90,30 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
+LAMBDA = 10
+
+if args.batch_size is not None:
+	BATCH_SIZE = args.batch_size
+else:
+	BATCH_SIZE = 40
+
+use_cuda = torch.cuda.is_available()
 def calc_gradient_penalty(netD, real_data, fake_data):
     #print real_data.size()
-    alpha = torch.rand(BATCH_SIZE, 1)
-    alpha = alpha.expand(real_data.size())
-    alpha = alpha.cuda(gpu) if use_cuda else alpha
+    alpha = torch.rand(BATCH_SIZE, 1) 
+    alpha = alpha.expand(real_data.shape[0])
+    alpha = alpha.to(device) 
 
     interpolates = alpha * real_data + ((1 - alpha) * fake_data)
 
-    if use_cuda:
-        interpolates = interpolates.cuda(gpu)
+    # if use_cuda:
+    interpolates = interpolates.to(device)
     interpolates = autograd.Variable(interpolates, requires_grad=True)
 
     disc_interpolates = netD(interpolates)
 
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size()).cuda(gpu) if use_cuda else torch.ones(
+                              grad_outputs=torch.ones(disc_interpolates.size()).to(device) if use_cuda else torch.ones(
                                   disc_interpolates.size()),
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
 
@@ -192,13 +200,13 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				#print(edge_image_x.shape)
 				d_real = model_d(y)
 				d_fake = model_d(out)
-				grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
+				# grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
 				# grad_penalty.backward()
 				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l =  d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  + grad_penalty # wasserstein D loss
+				d_l = -(torch.mean(d_real) - torch.mean(d_fake))# wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
@@ -391,8 +399,8 @@ def main():
 		learning_rate_disc = 3e-5
 	
 
-	batch_size_train = 45
-	batch_size_test = 45
+	batch_size_train = BATCH_SIZE
+	batch_size_test = BATCH_SIZE
 	if args.batch_size_train:
 		batch_size_train = args.batch_size_train
 	if args.batch_size_test:
