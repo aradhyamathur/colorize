@@ -95,7 +95,7 @@ LAMBDA = 10
 if args.batch_size is not None:
 	BATCH_SIZE = args.batch_size
 else:
-	BATCH_SIZE = 40
+	BATCH_SIZE = 25
 
 use_cuda = torch.cuda.is_available()
 def calc_gradient_penalty(netD, real_data, fake_data):
@@ -212,7 +212,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-1.0, 1.0)
+				p.data.clamp_(-3.0, 3.0)
 			
 			optimizer_d.zero_grad()
 			
@@ -304,7 +304,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 	with torch.no_grad():
 		for i, (name, x, y) in enumerate(test_loader):
-
+			if i % 1000 == 0:
+				break
 			x = x.to(device)
 			# y_l = y_l.to(device)
 
@@ -316,19 +317,6 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			test_losses.append(loss.item())
 
-			out_sq = out.squeeze(1)
-			output = out_sq.cpu().numpy()
-			j = random.randint(0, len(output) - 1)
-			
-			# normalized_out = normalize(output[j])
-
-			image_edge_in = g2[j].squeeze(0).cpu().numpy()
-			# image_edge_in = normalize(image_edge_in)
-			
-			image_edge_out = g1[j].squeeze(0).cpu().numpy()
-			# image_edge_out = normalize(image_edge_out)
-			
-			image = x[j].squeeze(0).cpu().numpy()
 
 			if i % 100 == 0:
 				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]

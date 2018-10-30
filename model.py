@@ -8,18 +8,18 @@ class Encoder(nn.Module):
 	def __init__(self):
 
 		super(Encoder, self).__init__()
-		self.conv1 = nn.Conv2d(2, 512, 3, padding=1, stride=2)
+		self.conv1 = nn.Conv2d(2, 1024, 3, padding=1, stride=2)
 		# self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
+		self.conv3 = nn.Conv2d(1024, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
-		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
+		self.conv5 = nn.Conv2d(256, 128, 3, padding=1)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
-		self.bn1 = nn.BatchNorm2d(512)
+		self.bn1 = nn.BatchNorm2d(1024)
 		# self.bn2 = nn.BatchNorm2d(512)
-		# self.bn3 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(256)
-		self.bn5 = nn.BatchNorm2d(64)
+		self.bn5 = nn.BatchNorm2d(128)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -42,10 +42,10 @@ class Encoder(nn.Module):
 
 		# print('Conv2: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		# out = self.bn3(F.leaky_relu(self.conv3(out)))
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
 
 		# print('Conv3: ', out.shape)
-		# out = F.dropout2d(out, p=0.3, training=self.training)
+		out = F.dropout2d(out, p=0.3, training=self.training)
 		# print(out.shape)
 		out = self.bn4(F.leaky_relu(self.conv4(out)))
 		# print('Conv4: ', out.shape)
@@ -69,21 +69,21 @@ class Discriminator(nn.Module):
 
 		super(Discriminator, self).__init__()
 		
-		self.conv1 = nn.Conv2d(in_channels, 512, 3, padding=1,stride=2)
-		# self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
-		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
+		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
+		self.conv2 = nn.Conv2d(1024,512, 3, padding=1)
+		self.conv3 = nn.Conv2d(512, 128, 3, padding=1, stride=2)
+		self.conv4 = nn.Conv2d(128, 64, 3, padding=1, stride=2)
 		
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
-		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 100)
+		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 150)
 		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(100, 1)
+		self.linear3 = nn.Linear(150, 1)
 
-		self.bn1 = nn.BatchNorm2d(512)
-		# self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(256)
+		self.bn1 = nn.BatchNorm2d(1024)
+		self.bn2 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(128)
 		self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():
@@ -97,7 +97,7 @@ class Discriminator(nn.Module):
 
 		out = self.bn1(F.leaky_relu(self.conv1(x)))
 		# print(out.shape)
-		# out = self.bn2(F.leaky_relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 		# print(out.shape)
 		out = self.bn3(F.leaky_relu(self.conv3(out)))
 		# print(out.shape)
@@ -122,17 +122,17 @@ class ColorDecoderConvTrans(nn.Module):
 		super(ColorDecoderConvTrans, self).__init__()
 
 
-		self.conv1 = nn.ConvTranspose2d(64, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
+		self.conv1 = nn.ConvTranspose2d(128, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv2 = nn.Conv2d(512, 128, 3, padding=1)
 		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
+		self.conv4 = nn.Conv2d(128, 128, 3, padding=1)
 		# self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
 		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
 		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(256)
+		self.bn2 = nn.BatchNorm2d(128)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(128)
 		# self.bn5 = nn.BatchNorm2d(256)
@@ -317,7 +317,7 @@ def test_net():
 	discriminator = Discriminator(128, 3)
 	print('Autoencoder Params', count_parameters(autoencoder))
 	print('Discriminator Params', count_parameters(discriminator))
-	tensor = torch.randn(25, 2, 128, 128)
+	tensor = torch.randn(20, 2, 128, 128)
 	
 	if CUDA :
 		autoencoder = autoencoder.to(torch.device("cuda"))
