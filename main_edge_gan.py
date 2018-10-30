@@ -304,7 +304,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 	with torch.no_grad():
 		for i, (name, x, y) in enumerate(test_loader):
-			if i % 1000 == 0:
+			if i % 1000 == 0 and i!=0:
 				break
 			x = x.to(device)
 			# y_l = y_l.to(device)
