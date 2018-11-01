@@ -129,6 +129,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 250
+	n_save_iter = 1000
 
 	if args.test_mode:
 		draw_iter = 1
@@ -257,11 +258,17 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				save_image(y, RANDOM_OUTPUTS_DIR + now +'cimg_' + str(i) +'_'+ str(j) + '_' + 'y.png')
 				# draw_outputs(i, model, now, args.data_path, filenames, j)
 			
-			if j % all_save_iter == 0:
+			# if j % all_save_iter == 0:
+			# 	print('..SAVING MODEL')
+			# 	torch.save(model_g.state_dict(), cur_model_dir + 'colorize2gen_' + str(i) + '.pt')
+			# 	print('GEN SAVED ')
+			# 	torch.save(model_d.state_dict(), cur_model_dir + 'colorize2disc_' + str(i) + '.pt')
+				# print('Disc SAVED')
+			if j % n_save_iter == 0:
 				print('..SAVING MODEL')
-				torch.save(model_g.state_dict(), cur_model_dir + 'colorize2gen_' + str(i) + '.pt')
+				torch.save(model_g.state_dict(), cur_model_dir + 'colorize2gen_' + str(j) + '.pt')
 				print('GEN SAVED ')
-				torch.save(model_d.state_dict(), cur_model_dir + 'colorize2disc_' + str(i) + '.pt')
+				torch.save(model_d.state_dict(), cur_model_dir + 'colorize2disc_' + str(j) + '.pt')
 				print('Disc SAVED')
 
 			if j % cur_save_iter == 0:
