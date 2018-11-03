@@ -65,7 +65,7 @@ for i, img in enumerate(images):
 		img_tensor = torch.from_numpy(image).float().unsqueeze(0)
 		img_tensor = trans(img_tensor.numpy())
 		# print(img_tensor.type)
-		random_vec = torch.rand(*img_tensor.shape)
+		random_vec = torch.rand(1).repeat(*img_tensor.shape)
 		# print(img_tensor.shape)
 		# print(random_vec.shape)
 		# print(random_vec)

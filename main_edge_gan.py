@@ -228,7 +228,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
 				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 				tv_loss = 1e-6*tv_loss
-				loss_G =  g_loss + loss_edge  + tv_loss# * 1e-3
+				loss_G =  g_loss + loss_edge +tv_loss # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()

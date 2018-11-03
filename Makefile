@@ -30,8 +30,8 @@ test_edge_gan:
 
 run_edge_gan:
 
-	python main_edge_gan.py --data_path ../datasets/128dim_slices_augmented_affine/slices/  --image_dim 128 --device cuda \
-	--custom_name wasserstein_lite_cgan --description lap4_edge_mult_1_gfast_weight_clip_1_point_0_tv_loss_1eminus6_generator_512_layer1_batch_size40_discriminator_512_noise_ranged_augmented_affine
+	python main_edge_gan.py --data_path ../datasets/128dim_slices_augmented/slices/  --image_dim 128 --device cuda \
+	--custom_name wasserstein_lite_cgan --description without_tv_loss_normal_slices_repeated_noise
 # 	python main_edge_gan.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite_lap4_edge_mult_1_gfast_weight_clip_5_point_0
 	# python main_edge_gan.py --data_path ../datasets/128dim_slices_augmented/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite
 	# python main_edge_detect.py --data_path ../color_my_pytorch_slices/data/slices  --image_dim 128 --device cuda
@@ -41,4 +41,4 @@ test_edge_detect_script:
 	python edge_detect_conv.py
 
 evaluate_images:
-	python evaluate_image.py  --load_prev_model_gen edge_cgan_trained_models/2018-10-31\ 15:36:36.691394_wasserstein_lite_cgan/colorize2gen_4000.pt --input_dir ../datasets/volumes/Slices/scan/  --color_dir ../datasets/volumes/Slices/color/ --custom_name _epoch_4000_scale_point5 --image_scale 0.5
+	python evaluate_image.py  --load_prev_model_gen edge_cgan_trained_models/2018-11-03\ 13:40:00.294944_wasserstein_lite_cgan/colorize2gen_2000.pt --input_dir ../datasets/volumes/Slices/scan/  --color_dir ../datasets/volumes/Slices/color/ --custom_name _epoch_2000_scale_1point0 --image_scale 1.0
