@@ -9,17 +9,17 @@ class Encoder(nn.Module):
 
 		super(Encoder, self).__init__()
 		self.conv1 = nn.Conv2d(1, 512, 3, padding=1, stride=2)
-		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(512, 256, 3, padding=1)
-		self.conv5 = nn.Conv2d(256, 64, 3, padding=1)  
+		self.conv5 = nn.Conv2d(256, 128, 3, padding=1)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(512)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(256)
-		self.bn5 = nn.BatchNorm2d(64)
+		self.bn5 = nn.BatchNorm2d(128)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -38,7 +38,7 @@ class Encoder(nn.Module):
 
 		# print('Conv1:', out.shape)
 
-		# out = self.bn2(F.leaky_relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 
 		# print('Conv2: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
@@ -61,190 +61,6 @@ class Encoder(nn.Module):
 		return out
 
 
-class Decoder(nn.Module):
-
-	def __init__(self, out_channels=1):
-
-		super(Decoder, self).__init__()
-		self.upsample1 = nn.Upsample(scale_factor=4)
-		self.upsample2 = nn.Upsample(scale_factor=2)
-
-		self.conv1 = nn.Conv2d(2048, 512, 3, padding=1)
-		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 1024, 3, padding=1)
-		self.conv4 = nn.Conv2d(1024, out_channels, 3, padding=1)
-		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(1024)
-
-		for m in self.modules():
-			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
-				print('Initializing', m)
-				nn.init.xavier_normal_(m.weight)
-
-	def forward(self, x):
-
-		#print('DECODER')
-
-		out = self.bn1(F.leaky_relu(self.conv1(x)))
-		#print('Conv1 : ', out.shape)
-
-		out = self.upsample1(out)
-
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
-		#print('Conv2: ', out.shape)
-
-		out = self.upsample2(out)
-
-		out = self.bn3(F.leaky_relu(self.conv3(out)))
-		#print('Conv3: ', out.shape)
-
-		out = F.leaky_relu(self.conv4(out))
-
-
-		#print('Conv4: ',  out.shape)
-
-		return out
-
-
-class ColorDecoder(nn.Module):
-
-	def __init__(self, out_channels=1):
-
-		super(ColorDecoder, self).__init__()
-		self.upsample1 = nn.Upsample(scale_factor=4)
-		self.upsample2 = nn.Upsample(scale_factor=2)
-
-		self.conv1 = nn.Conv2d(128, 256, 3, padding=1)
-		self.conv2 = nn.Conv2d(256, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 1024, 3, padding=1)
-		self.conv4 = nn.Conv2d(1024, 512, 3, padding=1)
-		self.conv5 = nn.Conv2d(512, 256, 3, padding=1)
-		self.conv6 = nn.Conv2d(256, 128, 3, padding=1)
-		self.conv7 = nn.Conv2d(128, out_channels, 3, padding=1)
-
-		self.bn1 = nn.BatchNorm2d(256)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(1024)
-		self.bn4 = nn.BatchNorm2d(512)
-		self.bn5 = nn.BatchNorm2d(256)
-		self.bn6 = nn.BatchNorm2d(128)
-
-
-		for m in self.modules():
-			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
-				print('Initializing', m)
-				nn.init.xavier_normal_(m.weight)
-
-	def forward(self, x):
-
-		#print('DECODER')
-		out = self.bn1(F.relu(self.conv1(x)))
-		#print('Conv1 : ', out.shape)
-
-		out = self.upsample1(out)
-
-		out = self.bn2(F.relu(self.conv2(out)))
-		#print('Conv2: ', out.shape)
-
-		out = self.upsample2(out)
-
-		out = self.bn3(F.relu(self.conv3(out)))
-		#print('Conv3: ', out.shape)
-
-		out = self.bn4(F.relu(self.conv4(out)))
-
-		out = self.bn5(F.relu(self.conv5(out)))
-
-		out = self.bn6(F.relu(self.conv6(out)))
-
-		out = F.relu(self.conv7(out))
-		#print('Conv4: ',  out.shape)
-
-		return out
-
-
-class Generator(nn.Module):
-
-	def __init__(self, train=True):
-
-		super(Generator, self).__init__()
-		self.encode = Encoder()
-
-		self.decode_color = ColorDecoder(2)
-		# self.decode_color = self.decode_color.cuda("cuda:1")
-		self.train_stat = train
-		if self.train_stat:
-			self.decode1 = Decoder()
-
-
-	def forward(self, x):
-
-		# print('Generator')
-
-		out = self.encode(x)
-		# out = out.cuda("cuda:1")
-		out_ab = self.decode_color(out)
-		# out_ab = out_ab.cuda("cuda:0")
-		if self.train_stat:
-			out_l = self.decode1(out)
-		
-			return out_l, out_ab
-
-		return out_ab
-
-class Discriminator(nn.Module):
-
-	def __init__(self, dim, in_channels):
-
-		super(Discriminator, self).__init__()
-		
-		self.conv1 = nn.Conv2d(in_channels, 1024, 3, padding=1,stride=2)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
-		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
-		
-		self.dropout1 = nn.Dropout(p=0.3)
-		self.dropout2 = nn.Dropout(p=0.2) 
-
-		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 100)
-		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(100, 1)
-
-		self.bn1 = nn.BatchNorm2d(1024)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(256)
-		self.bn4 = nn.BatchNorm2d(64) 
-
-		for m in self.modules():
-			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
-				print('Initializing', m)
-				nn.init.xavier_normal_(m.weight)
-
-	def forward(self, x):
-
-		# print('Discriminator')
-
-		out = self.bn1(F.leaky_relu(self.conv1(x)))
-		# print(out.shape)
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
-		# print(out.shape)
-		out = self.bn3(F.leaky_relu(self.conv3(out)))
-		# print(out.shape)
-		out = self.bn4(F.leaky_relu(self.conv4(out)))
-		# print('conv4', out.shape)
-		# print(x.shape[0])
-		out = out.view(x.shape[0], -1)
-		# print('reshaped ', out.shape)
-		out = F.leaky_relu(self.linear1(out))
-
-		out = self.dropout1(out)
-		# out = F.relu(self.linear2(out))
-		# out = self.dropout2(out)
-		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
-		# out = F.sigmoid(self.linear3(out))
-		return out
-
 class ColorDecoderConvTrans(nn.Module):
 
 	def __init__(self, out_channels=1):
@@ -253,7 +69,7 @@ class ColorDecoderConvTrans(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(64, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv1 = nn.ConvTranspose2d(128, 512, 3, padding=1, stride=2, output_padding=1)
 		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
 		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
 		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
@@ -307,6 +123,59 @@ class ColorDecoderConvTrans(nn.Module):
 		#print('Conv4: ',  out.shape)
 
 		return out
+
+class Discriminator(nn.Module):
+
+	def __init__(self, dim, in_channels):
+
+		super(Discriminator, self).__init__()
+		
+		self.conv1 = nn.Conv2d(in_channels, 512, 3, padding=1,stride=2)
+		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
+		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
+		
+		self.dropout1 = nn.Dropout(p=0.3)
+		self.dropout2 = nn.Dropout(p=0.2) 
+
+		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 200)
+		# self.linear2 = nn.Linear(100, 50)
+		self.linear3 = nn.Linear(200, 1)
+
+		self.bn1 = nn.BatchNorm2d(512)
+		self.bn2 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(256)
+		self.bn4 = nn.BatchNorm2d(64) 
+
+		for m in self.modules():
+			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+				print('Initializing', m)
+				nn.init.xavier_normal_(m.weight)
+
+	def forward(self, x):
+
+		# print('Discriminator')
+
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
+		# print(out.shape)
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		# print(out.shape)
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
+		# print(out.shape)
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
+		# print('conv4', out.shape)
+		# print(x.shape[0])
+		out = out.view(x.shape[0], -1)
+		# print('reshaped ', out.shape)
+		out = F.leaky_relu(self.linear1(out))
+
+		out = self.dropout1(out)
+		# out = F.relu(self.linear2(out))
+		# out = self.dropout2(out)
+		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
+		# out = F.sigmoid(self.linear3(out))
+		return out
+
 
 
 class AutoEncoder(nn.Module):
