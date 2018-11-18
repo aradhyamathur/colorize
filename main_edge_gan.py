@@ -23,7 +23,7 @@ from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
-from torchvision.utils import make_grid, save_image
+from torchvision.utils import *
 from torchvision import transforms
 
 
@@ -47,17 +47,22 @@ parser.add_argument("--device", nargs='?', const='cuda', type=str)
 parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
 parser.add_argument("--description", type=str, help='training description')
+parser.add_argument("--load_segmentation", type=str, help='training description')
 args = parser.parse_args()
 
 now = str(datetime.datetime.now())
+custom_name = args.custom_name
 
 if args.test_mode:
 	now += '_test_mode'
 
-if not args.custom_name:
+if args.load_segmentation:
+	now += '_segmented'
+
+if not custom_name:
 	now += '/'
 else:
-	now+='_' + args.custom_name + '/'
+	now+='_' + custom_name + '/'
 
 if args.test_mode:
 	print('.....................................RUNNING IN TEST MODE................................')
@@ -89,7 +94,7 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
-BATCH_SIZE = 35
+BATCH_SIZE = 25
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -374,19 +379,26 @@ def main():
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = nn.DataParallel(AutoEncoder(out_channels=3))
-	discriminator = nn.DataParallel(Discriminator(128, 3))
+	generator = AutoEncoder(out_channels=3)
+	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:
 		generator.load_state_dict(torch.load(args.load_prev_model_gen))
 		print('loaded generator successfully')
-	if args.load_prev_model_disc:	
+	if args.load_prev_model_disc:
 		generator.load_state_dict(torch.load(args.load_prev_model_disc))
 		print('loaded discriminator successfully')
 
-
 	generator = generator.to(device)
 	discriminator = discriminator.to(device)
+
+	if args.load_segmentation:
+		print('Loading segmentation model')
+		path = args.load_segmentation
+		generator = load_external(generator, path)
+
+	generator = nn.DataParallel(generator)
+	discriminator = nn.DataParallel(discriminator)
 
 	train(generator, discriminator, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now)
 

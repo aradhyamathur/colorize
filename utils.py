@@ -5,6 +5,8 @@ from colormath.color_diff import delta_e_cie2000
 import cv2
 from skimage.io import imsave
 import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
 # import matplotlib.pyplot as plt
 # matplotlib.pyplot.ion()
 
@@ -58,3 +60,42 @@ def save_batch_image_names(name, filename, batchindex, epoch=None):
 	val += ',' + str(batchindex) + '\n'
 	with open(filename, 'a') as f:
 		f.writelines(val)
+
+def load_external(model, path):
+	external_model = torch.load(path)
+	mods_weights = []
+	for val in external_model.keys():
+		if 'encoder' in val and 'bn' not in val and 'weight' in val:
+			mods_weights.append(val)
+	mods_bias = []
+	for val in external_model.keys():
+		if 'encoder' in val and 'bn' not in val and 'bias' in val:
+			mods_bias.append(val)
+	# print(len(mods_bias), len(mods_weights), len(list(model.encoder.children())))
+	# print(list(model.encoder.children()))
+	for i, val in enumerate(list(model.encoder.children())[:4]):
+		val.weight.data = external_model.get(mods_weights[i])
+		val.bias.data = external_model.get(mods_bias[i])
+	return model
+
+
+
+def test_load_ext_model():
+	from model import AutoEncoder
+	path = '../segmentation vol_generate/data/128dim_slices/fcn/weights.pth'
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+	model = AutoEncoder(3).to(device)
+	# model = nn.DataParallel(model)
+	model = load_external(model, path)
+	model.encoder.requires_grad = False
+	model = nn.DataParallel(model)
+	tensor = torch.randn(1, 1, 128, 128)
+	tensor = tensor.to(device)
+
+	out = model(tensor)
+	# print(out.shape)
+
+if __name__ == '__main__':
+	test_load_ext_model()
+
