@@ -9,7 +9,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss
+from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, EdgeLossSobel3Channel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
@@ -103,7 +103,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	draw_iter = 100
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 500
+	test_iter = 1000
 
 	if args.test_mode:
 		draw_iter = 1
@@ -134,7 +134,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	if args.criterion_edge == 'grad'  :
 		criterion_edge = EdgeLoss(device)
 	elif args.criterion_edge == 'laplace' or args.criterion_edge is None:
-		criterion_edge = EdgeLossLaplace3CHANNEL(device)
+		# criterion_edge = EdgeLossLaplace3CHANNEL(device)
+		criterion_edge = EdgeLossSobel3Channel(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
 	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # wgan 
@@ -184,7 +185,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-3.0, 3.0)
+				p.data.clamp_(-5.0, 5.0)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -192,12 +193,12 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-				tv_loss = 1e-6*tv_loss
+				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				# tv_loss = 1e-6*tv_loss
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge + tv_loss # * 1e-3
+				loss_G =  g_loss + 1.5*loss_edge # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -205,7 +206,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -277,10 +278,10 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
 			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
-			tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-			tv_loss = 1e-6*tv_loss
+			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+			# tv_loss = 1e-6*tv_loss
 			# loss = F.mse_loss(out, x_in)
-			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), tv_loss.item()))
+			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), 0))
 
 			test_losses.append(loss.item())
 

@@ -15,7 +15,7 @@ parser.add_argument('--input_dir', help="input image directory")
 parser.add_argument('--color_dir', help='colr image directory')
 parser.add_argument('--custom_name', nargs="?", help='custom name')
 parser.add_argument('--image_scale', nargs="?", type=float)
-DEMO_DIR = './demo2/'
+DEMO_DIR = './demo_2/'
 
 
 if not os.path.exists(DEMO_DIR):
@@ -50,22 +50,22 @@ images = os.listdir(args.input_dir)
 gen.eval()
 
 for i, img in enumerate(images):
-	if i % 20 == 0:
-		print(i, img.split('.'))
-		# exit()
-		image = io.imread(args.input_dir + img)
-		if args.image_scale:
-			image = rescale(image, args.image_scale)
-		image = img_as_float(skimage.color.rgb2gray(image))
-		t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
-		# print(t_img.shape)
+	# if i % 20 == 0:
+	print(i, img.split('.'))
+	# exit()
+	image = io.imread(args.input_dir + img)
+	if args.image_scale:
+		image = rescale(image, args.image_scale)
+	image = img_as_float(skimage.color.rgb2gray(image))
+	t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
+	# print(t_img.shape)
 
-		# exit()
-		with torch.no_grad():
-			out = gen(t_img)
+	# exit()
+	with torch.no_grad():
+		out = gen(t_img)
 
-		out_img = out.squeeze(0).permute(1,2,0).cpu().numpy()
-		io.imsave( DEMO_DIR + model_name+ '/' + img, out_img)
-		copyfile(args.color_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_color.png')
-		copyfile(args.input_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_scan.png')
+	out_img = out.squeeze(0).permute(1,2,0).cpu().numpy()
+	io.imsave( DEMO_DIR + model_name+ '/' + img, out_img)
+	copyfile(args.color_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_color.png')
+	copyfile(args.input_dir + img, DEMO_DIR + model_name + '/' + img.split('.')[0] + '_scan.png')
 	# break

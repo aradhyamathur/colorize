@@ -256,6 +256,37 @@ class EdgeLoss(nn.Module):
 
 		return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
 
+class EdgeLossSobel3Channel(nn.Module):
+
+    def __init__(self, device):
+        super(EdgeLossSobel3Channel, self).__init__()
+        x_filter = np.array([[[1, 0, -1], [2, 0, -2], [1, 0, -1]],[[1, 0, -1], [2, 0, -2], [1, 0, -1]],[[1, 0, -1], [2, 0, -2], [1, 0, -1]]])
+        y_filter = np.array([[[1, 2, 1], [0, 0, 0], [-1, -2, -1]],[[1, 2, 1], [0, 0, 0], [-1, -2, -1]],[[1, 2, 1], [0, 0, 0], [-1, -2, -1]]])
+        self.weights_x = torch.from_numpy(x_filter).float().unsqueeze(0)
+        self.weights_y = torch.from_numpy(y_filter).float().unsqueeze(0)
+
+        
+        self.weights_x = self.weights_x.to(device)
+        self.weights_y = self.weights_y.to(device)
+
+    
+    def forward(self, out, target):
+
+
+        g1_x = nn.functional.conv2d(out, self.weights_x, padding=1)
+        g2_x = nn.functional.conv2d(target, self.weights_x, padding=1)
+        g1_y = nn.functional.conv2d(out, self.weights_y, padding=1)
+        g2_y = nn.functional.conv2d(target, self.weights_y, padding=1)
+        
+        # print(g1_x.shape, g1_y.shape)
+#         print()
+
+
+        g_1 = (torch.abs(g1_x) + torch.abs(g1_y))
+        g_2 = (torch.abs(g2_x) + torch.abs(g2_y))
+        
+        
+        return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
 class EdgeLossLaplace(nn.Module):
 
 	def __init__(self, device):
