@@ -72,19 +72,19 @@ class ColorDecoderConvTrans(nn.Module):
 		self.conv1 = nn.ConvTranspose2d(128, 512, 3, padding=1, stride=2, output_padding=1)
 		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
 		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
+		self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
 		# self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
-		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
+		self.conv7 = nn.Conv2d(256, 128, 3, padding=1)
+		self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
-		self.bn4 = nn.BatchNorm2d(128)
+		self.bn4 = nn.BatchNorm2d(256)
 		# self.bn5 = nn.BatchNorm2d(256)
 		# self.bn6 = nn.BatchNorm2d(256)
-		self.bn7 = nn.BatchNorm2d(64)
+		self.bn7 = nn.BatchNorm2d(128)
 
 
 		for m in self.modules():
@@ -173,7 +173,7 @@ class Discriminator(nn.Module):
 		# out = F.relu(self.linear2(out))
 		# out = self.dropout2(out)
 		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
-		# out = F.sigmoid(self.linear3(out))
+		# out = F.relu(self.linear3(out))
 		return out
 
 

@@ -129,7 +129,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	# edge_detector = Edge(torch.cuda.is_available())
 
 	
-	criterion = nn.BCELoss()
+	# criterion = nn.BCELoss()
+	criterion = nn.MSELoss()
 
 	if args.criterion_edge == 'grad'  :
 		criterion_edge = EdgeLoss(device)
@@ -138,8 +139,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 		criterion_edge = EdgeLossSobel3Channel(device)
 	else:
 		raise Exception('ValueError: Illegal criterion specified')
-	optimizer_g = optim.RMSprop(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # wgan 
-	optimizer_d = optim.RMSprop(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # wgan
+	optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # wgan 
+	optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # wgan
 
 	# optimizer_g = optim.Adam(model_g.parameters(), lr=learning_rate_gen, weight_decay=0.001) # normgan
 	# optimizer_d = optim.Adam(model_d.parameters(), lr=learning_rate_disc, weight_decay=0.001) # normgan
@@ -152,8 +153,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			model_g.train()
 			model_d.train()
 			# print(x.shape)
-			# target_y = torch.ones(len(y)).to(device)
-			# target_x = torch.zeros(len(y)).to(device)
+			target_y = torch.ones(len(y)).to(device)
+			target_x = torch.zeros(len(y)).to(device)
 			# noise = torch.normal(torch.zeros(x.shape), torch.ones(x.shape)*0.25)
 			# print(x.max())
 			# print(x.min())
@@ -176,16 +177,16 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				d_real = model_d(y)
 				d_fake = model_d(out)
 				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# d_loss_real = criterion(d_real.squeeze(1), target_y)
-				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
-				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				d_loss_real = criterion(d_real.squeeze(1), target_y)
+				d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
+				d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				# d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-5.0, 5.0)
+				p.data.clamp_(-3.0, 3.0)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -196,9 +197,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 				# tv_loss = 1e-6*tv_loss
 
-				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
-				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 1.5*loss_edge # * 1e-3
+				g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
+				# g_loss = -torch.mean(d_fake) # Wasserstein G loss
+				loss_G = g_loss + loss_edge # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -360,12 +361,12 @@ def main():
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 3e-3
+		learning_rate_gen = 1e-2
 		# learning_rate_gen = 3e-3
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-5
+		learning_rate_disc = 1e-4
 	
 
 	batch_size_train = BATCH_SIZE

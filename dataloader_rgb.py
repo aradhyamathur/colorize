@@ -16,14 +16,15 @@ import skimage
 from skimage import util
 from skimage import img_as_float
 from torchvision import transforms
+import random
 
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color_slices/'
 SCAN_DIR = '/scan_slices/'
-
+random.seed(124)
 
 transform = transforms.Compose([transforms.ToTensor()])
-def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
+def process_images(DATA_DIR ,image, OUT_TYPE_DIR, random_state=0, rot=0, color=True):
     """Processes images in color volumes and converts to LAB color space
     :param: image_names : list of names of images
     :param: vols : list of volumes 
@@ -48,6 +49,14 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
         image = img_as_float(skimage.color.rgb2gray(image))
         # image = util.invert(image)
         # print('gray : ', image.dtype)
+    if random_state != 0:
+        if random_state == 1:
+            image = np.flipud(image)
+        elif random_state == 2:
+            image = np.fliplr(image)
+        elif random_state == 3:
+            random_rot = rot
+            image = np.rot90(image, random_rot)
 
 
     
@@ -73,12 +82,13 @@ class EfficientImageDataSet(Dataset):
 
     def __getitem__(self, index):
         img_name = self.X[index]
-        
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
+        random_state = random.randint(0, 3)
+        random_rot = random.randint(1,3)
+        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, random_state, random_rot, False).copy()).float()
         
         x_processed = x_processed.unsqueeze(0).permute(1, 2, 0).numpy()
         
-        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
+        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, random_state, random_rot).copy()).float()
         # y_processed = y_processed.unsqueeze(0)
         
         y_processed = y_processed.numpy()
@@ -99,12 +109,13 @@ class EfficientImageDataTestSet(Dataset):
 
     def __getitem__(self, index):
         img_name = self.X[index]
-        
-        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, False)).float()
+        random_state = random.randint(0,2)
+        random_rot = random.randint(1,3)
+        x_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, SCAN_DIR, random_state, random_rot, False).copy()).float()
         x_processed = x_processed.unsqueeze(0).permute(1, 2, 0)
         
         
-        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR)).float()
+        y_processed = torch.from_numpy(process_images(self.DATA_DIR, img_name, COLOR_DIR, random_state, random_rot).copy()).float()
         
         y_processed = y_processed.numpy()
         x_processed = x_processed.numpy()
