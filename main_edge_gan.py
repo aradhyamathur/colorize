@@ -9,7 +9,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, EdgeLossSobel3Channel
+from model import Resencoder, AutoEncoder, EdgeLossLaplace3CHANNEL, EdgeLossSobel3Channel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
@@ -25,7 +25,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import *
 from torchvision import transforms
-
+print('running ')
 
 
 
@@ -93,8 +93,8 @@ if not os.path.exists(EVAL_IMG_DIR):
 	os.makedirs(EVAL_IMG_DIR)
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
-
-BATCH_SIZE = 25
+print('running')
+BATCH_SIZE = 10
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -163,9 +163,11 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# exit()
 			# x = x + torch.randn(x.shape)*1e-2 
 			# x = x + noise
+			# x = x.to(device)
+			x = x.repeat(1, 3, 1, 1)
 			x = x.to(device)
 			y = y.to(device)
-			edge_image_x = x.repeat(1,3, 1, 1)
+			# edge_image_x = x.repeat(1,3, 1, 1)
 			optimizer_g.zero_grad()
 
 			for k in range(1):
@@ -192,7 +194,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				out = model_g(x)
 				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				loss_edge, g1, g2 = criterion_edge(out, x)
 				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 				# tv_loss = 1e-6*tv_loss
 
@@ -273,11 +275,12 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 		for i, (name, x, y) in enumerate(test_loader):
 
 			x = x.to(device)
+			x = x.repeat(1, 3, 1, 1)
 			# y_l = y_l.to(device)
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			loss, g1, g2 = criterion_edge(out, x)
 			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 			# tv_loss = 1e-6*tv_loss
 			# loss = F.mse_loss(out, x_in)
@@ -379,8 +382,10 @@ def main():
 	X_train, X_test, y_train, y_test = generate_train_test_split(args.data_path)
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
-
-	generator = AutoEncoder(out_channels=3)
+	print('reached')
+	# generator = AutoEncoder(out_channels=3)
+	generator = Resencoder()
+	print('gen loaded')
 	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:

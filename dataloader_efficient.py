@@ -151,7 +151,7 @@ if __name__ == '__main__':
         # print('AB channel', y[:,1:,:,:].shape)
         break
     try_dataloader = create_dataloader(data_dir, X_test, y_test)
-    for x, y in try_dataloader:
+    for name, x, y in try_dataloader:
         print(x.shape)
         print(y[0].shape)
         print(y[1].shape)

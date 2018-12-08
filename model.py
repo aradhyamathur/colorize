@@ -2,6 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import torchvision
+
+class Resencoder(nn.Module):
+	def __init__(self):
+		super(Resencoder, self).__init__()
+		self.model_ft = torchvision.models.resnet18(pretrained='imagenet')
+		for p in self.model_ft.parameters():
+			p.requires_grad = False
+		self.decoder = ColorDecoderConvTrans(out_channels=3)
+		self.model = nn.Sequential(*list(self.model_ft.children())[:-2])
+
+	def forward(self,x):
+
+		out = self.model(x)
+		# print(out.shape)
+		out = self.decoder(out)
+		# print(out.shape)
+		return out
 
 class Encoder(nn.Module):
 
@@ -69,21 +87,21 @@ class ColorDecoderConvTrans(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(128, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv1 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
 		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
-		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv3 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=4, output_padding=3)
 		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
-		# self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
-		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
+		self.conv5 = nn.ConvTranspose2d(128, 128, 3, padding=1, stride=4, output_padding=3)
+		self.conv6 = nn.Conv2d(128,	 64, 3, padding=1)
+		self.conv7 = nn.Conv2d(64, 64, 3, padding=1)
 		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(256)
-		# self.bn3 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(256)
 		self.bn4 = nn.BatchNorm2d(128)
-		# self.bn5 = nn.BatchNorm2d(256)
-		# self.bn6 = nn.BatchNorm2d(256)
+		self.bn5 = nn.BatchNorm2d(128)
+		self.bn6 = nn.BatchNorm2d(64)
 		self.bn7 = nn.BatchNorm2d(64)
 
 
@@ -96,25 +114,26 @@ class ColorDecoderConvTrans(nn.Module):
 		# print(x.shape)
 		#print('DECODER')
 		out = self.bn1(F.leaky_relu(self.conv1(x)))
-		#print('Conv1 : ', out.shape)
+		print('Conv1 : ', out.shape)
 
 		# out = self.upsample1(out)
 		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn2(F.leaky_relu(self.conv2(out)))
-		#print('Conv2: ', out.shape)
+		print('Conv2: ', out.shape)
 
 		# out = self.upsample2(out)
-		# out = F.dropout2d(out, p=0.3, training=self.training)
-		# out = self.bn3(F.leaky_relu(self.conv3(out)))
-		#print('Conv3: ', out.shape)
+		out = F.dropout2d(out, p=0.3, training=self.training)
+		# print(out.shape)
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
+		print('Conv3: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn4(F.leaky_relu(self.conv4(out)))
 
-		# out = F.dropout2d(out, p=0.3, training=self.training)
-		# out = self.bn5(F.leaky_relu(self.conv5(out)))
+		out = F.dropout2d(out, p=0.3, training=self.training)
+		out = self.bn5(F.leaky_relu(self.conv5(out)))
 
-		# out = F.dropout2d(out, p=0.3, training=self.training)
-		# out = self.bn6(F.leaky_relu(self.conv6(out)))
+		out = F.dropout2d(out, p=0.3, training=self.training)
+		out = self.bn6(F.leaky_relu(self.conv6(out)))
 
 		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn7(F.leaky_relu(self.conv7(out)))
@@ -344,23 +363,24 @@ def count_parameters(model):
 
 def test_net():
 	CUDA = torch.cuda.is_available()
-	autoencoder = AutoEncoder(out_channels=3)
+	# autoencoder = AutoEncoder(out_channels=3)
+	net = Resencoder()
 	discriminator = Discriminator(128, 3)
-	print('Autoencoder Params', count_parameters(autoencoder))
+	print('Autoencoder Params', count_parameters(net))
 	print('Discriminator Params', count_parameters(discriminator))
-	tensor = torch.randn(32, 1, 128, 128)
+	tensor = torch.randn(30, 3, 128, 128)
 	
 	if CUDA :
-		autoencoder = autoencoder.to(torch.device("cuda"))
+		net = net.to(torch.device("cuda"))
 		tensor = tensor.to(torch.device("cuda"))
 		discriminator = discriminator.to(torch.device("cuda"))
-		val = input()
+		# val = input()
 	 
-	out_l = autoencoder(tensor)
+	out_l = net(tensor)
 	out_disc = discriminator(out_l)
 	
 	print(out_l.shape)
-	print(out_disc.shape)
+	# print(out_disc.shape)
 
 if __name__ == '__main__':
 	test_net()
