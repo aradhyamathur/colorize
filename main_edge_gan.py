@@ -193,12 +193,12 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-				# tv_loss = 1e-6*tv_loss
+				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				tv_loss = 1e-7*tv_loss
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 1.5*loss_edge # * 1e-3
+				loss_G =  g_loss + loss_edge +tv_loss # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -206,7 +206,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -278,10 +278,10 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
 			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
-			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-			# tv_loss = 1e-6*tv_loss
-			# loss = F.mse_loss(out, x_in)
-			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), 0))
+			tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+			tv_loss = 1e-7*tv_loss
+			# loss = F.mse_loss(out, x_in) # gan with mse
+			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), tv_loss.item()))
 
 			test_losses.append(loss.item())
 
@@ -299,7 +299,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			image = x[j].squeeze(0).cpu().numpy()
 
-			if i % 100 == 0:
+			if i % 10 == 0:
 				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 				save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
 				save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out_lap.png', normalize=True)
@@ -315,6 +315,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 				# break
 				if args.test_mode:
 					break
+			if i > 300:
+				break
 			if args.test_mode:
 				break
 		# summary_writer.add_scalar('lab difference', np.average(diffs_avg))

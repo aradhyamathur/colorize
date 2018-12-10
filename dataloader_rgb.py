@@ -143,21 +143,23 @@ if __name__ == '__main__':
     print('X test:', X_test.shape)
     print('y  test :', y_test.shape)
 
-    try_dataloader = create_dataloader(data_dir, X_train, y_train,  2)
-    for x, y in cycle(try_dataloader):
+    try_dataloader = create_dataloader(data_dir, X_train, y_train,  25)
+    print(len(try_dataloader))
+    for name, x, y in cycle(try_dataloader):
         print(x.shape)
         print(y.shape)
         # print(y[1].shape)
         # print('L channel ', y[:,0,:,:].unsqueeze(1).shape)
         # print('AB channel', y[:,1:,:,:].shape)
         break
-    try_dataloader = create_dataloader(data_dir, X_test, y_test)
-    for x, y in try_dataloader:
-        print(x.shape)
-        print(y.shape)
-        # print(y[1].shape)
-        break
-    try_dataloader = create_testdataloader(data_dir, X_test, y_test, 15)
+    # try_dataloader = create_dataloader(data_dir, X_test, y_test)
+    # for name, x, y in try_dataloader:
+    #     print(x.shape)
+    #     print(y.shape)
+    #     # print(y[1].shape)
+    #     break
+    try_dataloader = create_testdataloader(data_dir, X_test, y_test, 25)
+    print(len(try_dataloader))
     for i, (name, x, y) in enumerate(try_dataloader):
         print(i)
         print(name)
