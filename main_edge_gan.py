@@ -94,7 +94,7 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
-BATCH_SIZE = 25
+BATCH_SIZE = 10
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -198,7 +198,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + 1.5*loss_edge # * 1e-3
+				loss_G =  g_loss + loss_edge # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -299,7 +299,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			
 			image = x[j].squeeze(0).cpu().numpy()
 
-			if i % 100 == 0:
+			if i % 10 == 0:
 				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
 				save_image(x, EVAL_IMG_DIR + now +'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'in.png', normalize=True)
 				save_image(g1, EVAL_IMG_DIR + now + 'cimg_' + str(epoch) +'_'+ str(batch_idx) + '_'+ str(i)+'_' + 'out_lap.png', normalize=True)
@@ -310,7 +310,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 			if args.test_mode:
 				print('show image')
-
+			if i > 100:
+				break
 			if i !=0:
 				# break
 				if args.test_mode:
