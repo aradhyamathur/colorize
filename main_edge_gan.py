@@ -48,6 +48,7 @@ parser.add_argument("--criterion_edge", nargs="?", const='laplace', type=str)
 parser.add_argument("--custom_name", type=str, help='custom folder to save results in')
 parser.add_argument("--description", type=str, help='training description')
 parser.add_argument("--load_segmentation", type=str, help='training description')
+parser.add_argument("--batch_size", type=int, nargs='?', help='batch size')
 args = parser.parse_args()
 
 now = str(datetime.datetime.now())
@@ -94,7 +95,10 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
-BATCH_SIZE = 10
+if args.batch_size:
+	BATCH_SIZE = args.BATCH_SIZE
+else:
+	BATCH_SIZE = 25
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -187,7 +191,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			for p in model_d.parameters():
 				p.data.clamp_(-5.0, 5.0)
 			optimizer_d.zero_grad()
-			for k in range(1):
+			for k in range(2):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
@@ -198,7 +202,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge # * 1e-3
+				loss_G =  g_loss + loss_edge * 1e-4 # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
