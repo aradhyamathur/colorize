@@ -189,9 +189,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-5.0, 5.0)
+				p.data.clamp_(-1.0, 1.0)
 			optimizer_d.zero_grad()
-			for k in range(2):
+			for k in range(1):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
@@ -202,7 +202,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge * 1e-4 # * 1e-3
+				loss_G =  g_loss + loss_edge
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
