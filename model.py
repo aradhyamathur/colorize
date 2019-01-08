@@ -8,18 +8,18 @@ class Encoder(nn.Module):
 	def __init__(self):
 
 		super(Encoder, self).__init__()
-		self.conv1 = nn.Conv2d(1, 1024, 3, padding=1, stride=2)
-		self.conv2 = nn.Conv2d(1024, 512, 3, padding=1)
+		self.conv1 = nn.Conv2d(1, 128, 3, padding=1, stride=2)
+		self.conv2 = nn.Conv2d(128, 256, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv4 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv5 = nn.Conv2d(512, 256, 3, padding=1)  
+		self.conv4 = nn.Conv2d(256, 512, 3, padding=1,stride=2)
+		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1, stride=2)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
-		self.bn1 = nn.BatchNorm2d(1024)
-		self.bn2 = nn.BatchNorm2d(512)
+		self.bn1 = nn.BatchNorm2d(128)
+		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(512)
-		self.bn5 = nn.BatchNorm2d(256)
+		self.bn5 = nn.BatchNorm2d(1024)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -69,11 +69,11 @@ class ColorDecoderConvTrans(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(256, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
-		# self.conv3 = nn.ConvTranspose2d(512, 512, 3, padding=1, stride=2, output_padding=1)
-		self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
-		# self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
+		self.conv1 = nn.ConvTranspose2d(1024, 512, 3, padding=1, stride=2, output_padding=1)
+		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+		self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+		# self.conv4 = nn.Conv2d(512, 128, 3, padding=1)
+		self.conv5 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
 		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
 		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
@@ -100,7 +100,7 @@ class ColorDecoderConvTrans(nn.Module):
 
 		# out = self.upsample1(out)
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		out = self.bn2(F.leaky_relu(self.conv3(out)))
 		#print('Conv2: ', out.shape)
 
 		# out = self.upsample2(out)
@@ -108,7 +108,7 @@ class ColorDecoderConvTrans(nn.Module):
 		# out = self.bn3(F.leaky_relu(self.conv3(out)))
 		#print('Conv3: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn4(F.leaky_relu(self.conv4(out)))
+		out = self.bn4(F.leaky_relu(self.conv5(out)))
 
 		# out = F.dropout2d(out, p=0.3, training=self.training)
 		# out = self.bn5(F.leaky_relu(self.conv5(out)))
@@ -123,6 +123,7 @@ class ColorDecoderConvTrans(nn.Module):
 		#print('Conv4: ',  out.shape)
 
 		return out
+
 
 class Discriminator(nn.Module):
 
@@ -172,7 +173,7 @@ class Discriminator(nn.Module):
 		out = self.dropout1(out)
 		# out = F.relu(self.linear2(out))
 		# out = self.dropout2(out)
-		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
+		out = F.hardtanh(self.linear3(out)) # uncomment for wgAn
 		# out = F.sigmoid(self.linear3(out))
 		return out
 

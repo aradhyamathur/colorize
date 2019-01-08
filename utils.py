@@ -51,10 +51,10 @@ def color_diff(img1, img2, img_scan):
 	return deltas
 
 def save_batch_image_names(name, filename, batchindex, epoch=None):
-	val = name[0]
+	val = str(name[0])
 
 	for n in name[1:]:
-		val += "," + n
+		val += "," + str(n)
 	if epoch is not None:
 		val += ',' + str(epoch)
 	val += ',' + str(batchindex) + '\n'

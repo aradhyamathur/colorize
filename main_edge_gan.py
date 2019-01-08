@@ -10,7 +10,7 @@ import tqdm
 import argparse
 import os
 from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, EdgeLossSobel3Channel
-from dataloader_rgb import *
+from dataloader_dm import *
 import datetime
 from itertools import cycle
 import random
@@ -94,7 +94,7 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
-BATCH_SIZE = 25
+BATCH_SIZE = 50	
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -147,7 +147,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d, args.description) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
-		for j, (name, x, y) in enumerate(train_dataloader):
+		for j, (name, x, y, _) in enumerate(train_dataloader):
 
 			model_g.train()
 			model_d.train()
@@ -185,7 +185,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-5.0, 5.0)
+				p.data.clamp_(-1.0, 1.0)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -193,12 +193,12 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
-				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-				tv_loss = 1e-7*tv_loss
+				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				# tv_loss = 1e-7*tv_loss
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge +tv_loss # * 1e-3
+				loss_G =  g_loss + loss_edge  # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
@@ -206,7 +206,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -270,7 +270,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 	diffs_avg = []
 
 	with torch.no_grad():
-		for i, (name, x, y) in enumerate(test_loader):
+		for i, (name, x, y, _) in enumerate(test_loader):
 
 			x = x.to(device)
 			# y_l = y_l.to(device)
@@ -278,26 +278,13 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
 			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
-			tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-			tv_loss = 1e-7*tv_loss
+			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+			# tv_loss = 1e-7*tv_loss
 			# loss = F.mse_loss(out, x_in) # gan with mse
-			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), tv_loss.item()))
+			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), 0))
 
 			test_losses.append(loss.item())
 
-			out_sq = out.squeeze(1)
-			output = out_sq.cpu().numpy()
-			j = random.randint(0, len(output) - 1)
-			
-			# normalized_out = normalize(output[j])
-
-			image_edge_in = g2[j].squeeze(0).cpu().numpy()
-			# image_edge_in = normalize(image_edge_in)
-			
-			image_edge_out = g1[j].squeeze(0).cpu().numpy()
-			# image_edge_out = normalize(image_edge_out)
-			
-			image = x[j].squeeze(0).cpu().numpy()
 
 			if i % 10 == 0:
 				# file_name = EVAL_IMG_DIR + now + '/' + 'cimg_' + str(epoch) + '_' + str(batch_idx)+ '_' + str(j) + '_'   + name[j]
@@ -378,9 +365,10 @@ def main():
 		batch_size_test = args.batch_size_test 
 
 	
-	X_train, X_test, y_train, y_test = generate_train_test_split(args.data_path)
-	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
-	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
+	
+	color_train, scan_train, color_test, scan_test = generate_train_test_split(args.data_path)
+	train_dataloader = create_dataloader(args.data_path, color_train, scan_train, batch_size_train)
+	test_dataloader = create_testdataloader(args.data_path, color_test, scan_test, batch_size_test)
 
 	generator = AutoEncoder(out_channels=3)
 	discriminator = Discriminator(128, 3)
