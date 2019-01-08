@@ -40,4 +40,5 @@ test_edge_detect_script:
 	python edge_detect_conv.py
 
 evaluate_images:
-	python evaluate_image.py  --load_prev_model_gen edge_gan_trained_models/2018-11-06\ 11:42:52.682790_wasserstein_lite/colorize2gen_batch_1_0.pt --input_dir ../datasets/volumes/Slices/scan/  --color_dir ../datasets/volumes/Slices/color/ --custom_name _withtv_batch_0_2000_complete_dsets  --image_scale 1.0
+	python evaluate_image.py  --load_prev_model_gen edge_gan_trained_models/2019-01-08\ 17:11:50.358210_model_redux_wasserstein_lite_sobel/colorize2gen_batch_4_2000.pt --input_dir ../datasets/volumes/Slices/scan/  --color_dir ../datasets/volumes/Slices/color/ --custom_name _model_redux_4_2000_complete_dsets  --image_scale 1.0
+	#python evaluate_image.py  --load_prev_model_gen edge_gan_trained_models/2018-11-06\ 11:42:52.682790_wasserstein_lite/colorize2gen_batch_1_0.pt --input_dir ../datasets/volumes/Slices/scan/  --color_dir ../datasets/volumes/Slices/color/ --custom_name _withtv_batch_0_2000_complete_dsets  --image_scale 1.0

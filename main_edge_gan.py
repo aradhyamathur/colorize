@@ -98,7 +98,7 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 25
+	BATCH_SIZE = 60
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
