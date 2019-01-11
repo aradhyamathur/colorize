@@ -173,7 +173,7 @@ class Discriminator(nn.Module):
 		out = self.dropout1(out)
 		# out = F.relu(self.linear2(out))
 		# out = self.dropout2(out)
-		out = F.hardtanh(self.linear3(out)) # uncomment for wgAn
+		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
 		# out = F.sigmoid(self.linear3(out))
 		return out
 
