@@ -26,7 +26,7 @@ from utils import *
 from torchvision.utils import *
 from torchvision import transforms
 
-
+torch.cuda.set_device(0)
 
 
 parser = argparse.ArgumentParser()
@@ -94,7 +94,7 @@ if not os.path.exists(EVAL_IMG_DIR):
 if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
-BATCH_SIZE = 50	
+BATCH_SIZE = 80
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -185,9 +185,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-1.0, 1.0)
+				p.data.clamp_(-0.1, 0.1)
 			optimizer_d.zero_grad()
-			for k in range(1):
+			for k in range(4):
 				optimizer_g.zero_grad()
 
 				out = model_g(x)
@@ -388,8 +388,8 @@ def main():
 		path = args.load_segmentation
 		generator = load_external(generator, path)
 
-	generator = nn.DataParallel(generator)
-	discriminator = nn.DataParallel(discriminator)
+	# generator = nn.DataParallel(generator)
+	# discriminator = nn.DataParallel(discriminator)
 
 	train(generator, discriminator, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now)
 
