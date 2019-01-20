@@ -15,12 +15,14 @@ from skimage import  io
 import skimage
 from skimage import util
 from skimage import img_as_float
+import random
 from torchvision import transforms
 
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color_slices/'
 SCAN_DIR = '/scan_slices/'
 
+random.seed(123)
 
 transform = transforms.Compose([transforms.ToTensor()])
 def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
@@ -55,8 +57,11 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
     return image
 
 def generate_train_test_split(DATA_DIR):
-    color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
-    scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
+    color_images = np.array(sorted(os.listdir(DATA_DIR + COLOR_DIR)))
+    scan_images = np.array(sorted(os.listdir(DATA_DIR + SCAN_DIR)))
+    
+    color_images = random.shuffle(color_images)[:80000]
+    scan_images = random.shuffle(scan_images)[:80000]
 
     X_train, X_test, y_train, y_test = train_test_split(scan_images, color_images, test_size=0.2, random_state=123)
     return X_train, X_test, y_train, y_test

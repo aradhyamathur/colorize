@@ -15,8 +15,11 @@ from skimage import  io
 import skimage
 from skimage import util
 from skimage import img_as_float
+from sklearn.utils import shuffle
 from torchvision import transforms
 import random
+
+random.seed(123)
 
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color/'
@@ -44,32 +47,52 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True, random_state=-1):
         image = io.imread(base_dir + '/' + image)
         image = img_as_float(skimage.color.rgb2gray(image))
     if not color:
-        if random_state == -1:
-            pass
-        elif random_state == 0:
-            image = np.fliplr(image).copy()
-        elif random_state == 1:
-            image = np.flipud(image).copy()
+        # if random_state == -1:
+        #     pass
+        # elif random_state == 0:
+        #     image = np.fliplr(image).copy()
+        # elif random_state == 1:
+        #     image = np.flipud(image).copy()
         return image
     elif color:
 
-        if random_state == -1:
-            pass
-        elif random_state == 0:
-            image = np.fliplr(image).copy()
-            image_gray = np.fliplr(image_gray).copy() 
-        elif random_state == 1:
-            image = np.flipud(image).copy()
-            image_gray = np.flipud(image_gray).copy()
+        # if random_state == -1:
+        #     pass
+        # elif random_state == 0:
+        #     image = np.fliplr(image).copy()
+        #     image_gray = np.fliplr(image_gray).copy() 
+        # elif random_state == 1:
+        #     image = np.flipud(image).copy()
+        #     image_gray = np.flipud(image_gray).copy()
         return (image, image_gray)
 
 
 def generate_train_test_split(DATA_DIR):
-    color_images = np.array(sorted(os.listdir(DATA_DIR + COLOR_DIR)))
-    scan_images = np.array(sorted(os.listdir(DATA_DIR + SCAN_DIR)))
+    l1 = os.listdir(DATA_DIR + COLOR_DIR)
+    l1.sort()
+    l2 = os.listdir(DATA_DIR + SCAN_DIR)
+    l2.sort()
+    color_images = np.array(l1)
+    scan_images = np.array(l2)
 
-    color_train, color_test = train_test_split(color_images, random_state=123)
-    scan_train, scan_test = train_test_split(scan_images, random_state=123)
+    c=[]
+    s= []
+    indices = list(range(len(color_images)))
+    random.shuffle(indices)
+    for i in range(50000):
+        c.append(color_images[indices[i]])
+        s.append(scan_images[indices[i]])
+    # color_images = color_images[:80000]
+    # scan_images = scan_images[:80000]
+    split_index = int(len(c)*.80)
+    color_train = c[:split_index]
+    color_test = c[split_index:]
+    scan_train = s[:split_index]
+    scan_test = s[split_index:]
+    # color_train, color_test = train_test_split(c)
+    # scan_train, scan_test = train_test_split(s)
+    # import ipdb; 
+    # ipdb.set_trace()
     return color_train, scan_train, color_test, scan_test
 
 
@@ -139,10 +162,10 @@ class EfficientImageDataTestSet(Dataset):
 
 
 
-def create_dataloader(DATA_DIR, color, scan, batch_size=1, shuffle=True):
+def create_dataloader(DATA_DIR, color, scan, batch_size=1, shuffle=False):
     
     dset = EfficientImageDataSet(color, scan, DATA_DIR)
-    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=1)
+    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=False, num_workers=1)
     return dataloader
 
 
