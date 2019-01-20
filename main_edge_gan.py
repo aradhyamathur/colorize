@@ -100,7 +100,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 100
+	draw_iter = 10
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 1000
@@ -124,7 +124,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 	if args.end_epoch:
 		end_epoch = args.end_epoch
-	else:end_epoch = 100
+	else:end_epoch = 1000
 	
 	# edge_detector = Edge(torch.cuda.is_available())
 
@@ -185,7 +185,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-1.0, 1.0)
+				p.data.clamp_(-0.05, 0.05)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
