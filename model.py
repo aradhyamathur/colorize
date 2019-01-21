@@ -131,9 +131,9 @@ class Discriminator(nn.Module):
 		super(Discriminator, self).__init__()
 		
 		self.conv1 = nn.Conv2d(in_channels, 512, 3, padding=1,stride=2)
-		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
-		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
+		self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
+		self.conv3 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
+		self.conv4 = nn.Conv2d(128, 64, 3, padding=1, stride=2)
 		
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
@@ -143,8 +143,8 @@ class Discriminator(nn.Module):
 		self.linear3 = nn.Linear(200, 1)
 
 		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(256)
+		self.bn2 = nn.BatchNorm2d(256)
+		self.bn3 = nn.BatchNorm2d(128)
 		self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():

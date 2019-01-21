@@ -185,7 +185,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				optimizer_d.step()
 
 			for p in model_d.parameters():
-				p.data.clamp_(-0.05, 0.05)
+				p.data.clamp_(-0.1, 0.1)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
