@@ -142,10 +142,10 @@ class Discriminator(nn.Module):
 		# self.linear2 = nn.Linear(100, 50)
 		self.linear3 = nn.Linear(200, 1)
 
-		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(256)
-		self.bn3 = nn.BatchNorm2d(128)
-		self.bn4 = nn.BatchNorm2d(64) 
+		# self.bn1 = nn.BatchNorm2d(512)
+		# self.bn2 = nn.BatchNorm2d(256)
+		# self.bn3 = nn.BatchNorm2d(128)
+		# self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
@@ -156,13 +156,13 @@ class Discriminator(nn.Module):
 
 		# print('Discriminator')
 
-		out = self.bn1(F.leaky_relu(self.conv1(x)))
+		out = F.leaky_relu(self.conv1(x))
 		# print(out.shape)
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		out = F.leaky_relu(self.conv2(out))
 		# print(out.shape)
-		out = self.bn3(F.leaky_relu(self.conv3(out)))
+		out = F.leaky_relu(self.conv3(out))
 		# print(out.shape)
-		out = self.bn4(F.leaky_relu(self.conv4(out)))
+		out = F.leaky_relu(self.conv4(out))
 		# print('conv4', out.shape)
 		# print(x.shape[0])
 		out = out.view(x.shape[0], -1)

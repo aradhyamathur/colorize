@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import *
+from torch import autograd
 from torchvision import transforms
 
 torch.cuda.set_device(0)
@@ -95,6 +96,28 @@ if not os.path.exists(LOG_DIR):
 	os.makedirs(LOG_DIR)
 
 BATCH_SIZE = 80
+LAMBDA = 1.0
+
+def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
+    #print real_data.size()
+    alpha = torch.rand(BATCH_SIZE, channels, 1, 1)
+    # print(alpha.shape)
+    alpha = alpha.expand(real_data.size())
+    alpha = alpha.to(device)
+    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+    # print(interpolates.shape)
+    
+    interpolates = interpolates.to(device)
+    interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+    disc_interpolates = netD(interpolates)
+
+    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).to(device),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+    return gradient_penalty
 
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
@@ -179,13 +202,14 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
+				grad_penalty = calc_gradient_penalty(model_d, x.data, out.data)
+				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  + grad_penalty # wasserstein D loss
 				d_loss = d_l
 				d_loss.backward()
 				optimizer_d.step()
 
-			for p in model_d.parameters():
-				p.data.clamp_(-0.1, 0.1)
+			# for p in model_d.parameters():
+			# 	p.data.clamp_(-0.1, 0.1)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -198,7 +222,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
-				loss_G =  g_loss + loss_edge  # * 1e-3
+				loss_G =  g_loss + loss_edge*10.0  # * 1e-3
 				# if lowest > loss_G:
 				# 	lowest = loss_G
 				loss_G.backward()
