@@ -134,7 +134,7 @@ class Discriminator(nn.Module):
 		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
 		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
-		
+		self.convDropout = nn.Dropout2d(p=0.3)
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
@@ -142,10 +142,10 @@ class Discriminator(nn.Module):
 		# self.linear2 = nn.Linear(100, 50)
 		self.linear3 = nn.Linear(200, 1)
 
-		self.bn1 = nn.BatchNorm2d(512)
-		self.bn2 = nn.BatchNorm2d(512)
-		self.bn3 = nn.BatchNorm2d(256)
-		self.bn4 = nn.BatchNorm2d(64) 
+		# self.bn1 = nn.BatchNorm2d(512)
+		# self.bn2 = nn.BatchNorm2d(512)
+		# self.bn3 = nn.BatchNorm2d(256)
+		# self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
@@ -156,15 +156,26 @@ class Discriminator(nn.Module):
 
 		# print('Discriminator')
 
-		out = self.bn1(F.leaky_relu(self.conv1(x)))
+		out = F.leaky_relu(self.conv1(x))
+		# out = self.bn1(out)
 		# print(out.shape)
-		out = self.bn2(F.leaky_relu(self.conv2(out)))
+		
+		out = F.leaky_relu(self.conv2(out))
+		out = self.convDropout(out)
+		# out = self.bn2(out)
 		# print(out.shape)
-		out = self.bn3(F.leaky_relu(self.conv3(out)))
+		
+		out = F.leaky_relu(self.conv3(out))
+		out = F.dropout2d(out, p=0.2)
+		# out = self.bn3(out)
 		# print(out.shape)
-		out = self.bn4(F.leaky_relu(self.conv4(out)))
+
+		out = F.leaky_relu(self.conv4(out))
+		out = F.dropout2d(out, p=0.2)
+		# out = self.bn4(out)
 		# print('conv4', out.shape)
 		# print(x.shape[0])
+
 		out = out.view(x.shape[0], -1)
 		# print('reshaped ', out.shape)
 		out = F.leaky_relu(self.linear1(out))
@@ -286,7 +297,7 @@ class EdgeLossSobel3Channel(nn.Module):
         g_2 = (torch.abs(g2_x) + torch.abs(g2_y))
         
         
-        return torch.mean((g_1 - g_2).pow(2)), g_1, g_2
+        return torch.mean(torch.abs(g_1 - g_2)), g_1, g_2
 class EdgeLossLaplace(nn.Module):
 
 	def __init__(self, device):

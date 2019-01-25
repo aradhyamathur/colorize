@@ -25,9 +25,9 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import *
 from torchvision import transforms
+from torch import autograd
 
-
-
+torch.cuda.set_device(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', help='path to data folder', required=True)
@@ -100,11 +100,34 @@ if args.batch_size:
 else:
 	BATCH_SIZE = 60
 
+LAMBDA = 1.0
+def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
+    #print real_data.size()
+    alpha = torch.rand(BATCH_SIZE, channels, 1, 1)
+    # print(alpha.shape)
+    alpha = alpha.expand(real_data.size())
+    alpha = alpha.to(device)
+    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+    # print(interpolates.shape)
+    
+    interpolates = interpolates.to(device)
+    # interpolates.required_grad = True
+    interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+    disc_interpolates = netD(interpolates)
+
+    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).to(device),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+    return gradient_penalty
+
 def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now):
 	
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
-	draw_iter = 100
+	draw_iter = 50
 	all_save_iter = 500
 	cur_save_iter = 100
 	test_iter = 1000
@@ -183,13 +206,14 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
+				grad_penalty = calc_gradient_penalty(model_d, x.data, out.data)
 				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-				d_loss = d_l
+				d_loss = d_l + grad_penalty
 				d_loss.backward()
 				optimizer_d.step()
 
-			for p in model_d.parameters():
-				p.data.clamp_(-1.0, 1.0)
+			# for p in model_d.parameters():
+				# p.data.clamp_(-1.0, 1.0)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -365,12 +389,12 @@ def main():
 	if args.learning_rate_gen:
 		learning_rate_gen = args.learning_rate_gen
 	else:
-		learning_rate_gen = 3e-3
+		learning_rate_gen = 3e-4
 		# learning_rate_gen = 3e-3
 	if args.learning_rate_disc:
 		learning_rate_disc = args.learning_rate_disc
 	else:
-		learning_rate_disc = 3e-5
+		learning_rate_disc = 3e-4		
 	
 
 	batch_size_train = BATCH_SIZE
@@ -403,8 +427,8 @@ def main():
 		path = args.load_segmentation
 		generator = load_external(generator, path)
 
-	generator = nn.DataParallel(generator)
-	discriminator = nn.DataParallel(discriminator)
+	# generator = nn.DataParallel(generator)
+	# discriminator = nn.DataParallel(discriminator)
 
 	train(generator, discriminator, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now)
 
