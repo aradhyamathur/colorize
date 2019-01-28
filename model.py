@@ -2,6 +2,32 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from UNet import *
+from UNet_short import *
+
+class UNetEncDec(nn.Module):
+	def __init__(self, path, out_channels=3):
+		super(UNetEncDec, self).__init__()
+		self.encoder = UnetShort(path)
+		self.encoder.requires_grad = False
+		self.decoder = ColorDecoderConvTrans(out_channels=out_channels)
+
+	def forward(self, x):
+		out = self.encoder(x)
+		out = self.decoder(out)
+		return out
+
+
+class UNetEncoder(nn.Module):
+	def __init__(self, encoder, out_channels=3):
+		self.encoder = encoder
+		self.encoder.requires_grad = False
+		self.decoder = ColorDecoderConvTrans(out_channels=out_channels)
+
+	def forward(self, x):
+		out = self.encoder(x)
+		out = self.decoder(out)
+		return out
 
 class Encoder(nn.Module):
 
@@ -66,25 +92,25 @@ class ColorDecoderConvTrans(nn.Module):
 	def __init__(self, out_channels=1):
 
 		super(ColorDecoderConvTrans, self).__init__()
-		self.upsample1 = nn.Upsample(scale_factor=4)
-		self.upsample2 = nn.Upsample(scale_factor=2)
+		# self.upsample1 = nn.Upsample(scale_factor=4)
+		# self.upsample2 = nn.Upsample(scale_factor=2)
 
 		self.conv1 = nn.ConvTranspose2d(1024, 512, 3, padding=1, stride=2, output_padding=1)
 		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv4 = nn.Conv2d(512, 128, 3, padding=1)
-		self.conv5 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
+		self.conv5 = nn.ConvTranspose2d(256, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
-		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
+		self.conv7 = nn.ConvTranspose2d(256, 3, 3, padding=1, stride=2, output_padding=1)
+		# self.conv8 = nn.Conv2d(128, 3, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
-		self.bn4 = nn.BatchNorm2d(128)
+		self.bn4 = nn.BatchNorm2d(256)
 		# self.bn5 = nn.BatchNorm2d(256)
 		# self.bn6 = nn.BatchNorm2d(256)
-		self.bn7 = nn.BatchNorm2d(64)
+		# self.bn7 = nn.BatchNorm2d(128)
 
 
 		for m in self.modules():
@@ -117,9 +143,10 @@ class ColorDecoderConvTrans(nn.Module):
 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
 
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn7(F.leaky_relu(self.conv7(out)))
+		out = F.sigmoid(self.conv7(out))
+		# out = self.bn7(out)
 
-		out = F.sigmoid(self.conv8(out))
+		# out = F.sigmoid(self.conv8(out))
 		#print('Conv4: ',  out.shape)
 
 		return out
@@ -362,5 +389,16 @@ def test_net():
 	print(out_l.shape)
 	print(out_disc.shape)
 
+def test_unet():
+	unet_save_file = '4_10000_color_model.pth'
+	gen = UNetEncDec(unet_save_file)
+	print('Gen  params:', count_parameters(gen))
+	disc = Discriminator(128, 3)
+	tensor = torch.randn(1,1,128,128)
+	out = gen(tensor)
+	print(out.shape)
+	disc_out = disc(out)
+	print('disc out', disc_out.shape)
 if __name__ == '__main__':
-	test_net()
+	# test_net()
+	test_unet()

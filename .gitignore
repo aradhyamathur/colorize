@@ -1,3 +1,7 @@
+*.zip
+*.pth
+Segmentation/
+*_models/
 rand_outputs/
 test_outputs/
 log_dir/

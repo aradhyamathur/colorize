@@ -9,7 +9,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, EdgeLossSobel3Channel
+from model import UNetEncoder, Discriminator, EdgeLossSobel3Channel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
@@ -25,7 +25,8 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from utils import *
 from torchvision.utils import *
 from torchvision import transforms
-
+from UNet import *
+import collections
 
 
 
@@ -328,7 +329,7 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 
 def main():
 	global summary_writer
-
+	unet_save_file = '4_10000_color_model.pth'
 
 	cur_model_dir = SAVED_MODEL_DIR + now
 
@@ -380,12 +381,24 @@ def main():
 	if args.batch_size_test:
 		batch_size_test = args.batch_size_test 
 
-	
+
 	X_train, X_test, y_train, y_test = generate_train_test_split(args.data_path)
 	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
-	generator = AutoEncoder(out_channels=3)
+	# model = UNet(10).to(device)
+	# # model = nn.DataParallel(model)
+	# model_dic = torch.load(save_file)
+	# new_state_dict = collections.OrderedDict()
+	# for k, v in model_dic.items():
+	#     name = k.replace('module.', '')# remove `module.`
+	#     new_state_dict[name] = v
+	# model.load_state_dict(new_state_dict)
+
+	# unet_model = UNet(3, depth=5)
+	# unet_model = unet_model.load_state_dict(torch.load(save_file))
+	generator = UNetEncDec(unet_save_file)
+	# exit()
 	discriminator = Discriminator(128, 3)
 
 	if args.load_prev_model_gen:
@@ -403,8 +416,8 @@ def main():
 		path = args.load_segmentation
 		generator = load_external(generator, path)
 
-	generator = nn.DataParallel(generator)
-	discriminator = nn.DataParallel(discriminator)
+	# generator = nn.DataParallel(generator)
+	# discriminator = nn.DataParallel(discriminator)
 
 	train(generator, discriminator, learning_rate_gen, learning_rate_disc, learning_rate_edge, train_dataloader, test_dataloader, now)
 
