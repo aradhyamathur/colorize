@@ -29,7 +29,7 @@ test_edge_gan:
 
 run_edge_gan:
 
-	python main_edge_gan.py --data_path ../datasets/random_axis/subslice_f/  --image_dim 128 --device cuda --custom_name random_axis_model_redux_wasserstein_lite_sobel_l1 --description sobel_edge_without_dataparallel
+	python main_edge_gan.py --data_path ../datasets/random_axis/subslice_f/  --image_dim 128 --device cuda --custom_name random_axis_model_redux_wgan_gp_lite_sobel_l1 --description sobel_edge_without_dataparallel_grad_penalty_10
 	#--load_segmentation "../segmentation vol_generate/data/128dim_slices/fcn/weights.pth"
 # 	python main_edge_gan.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite_lap4_edge_mult_1_gfast_weight_clip_5_point_0
 	# python main_edge_gan.py --data_path ../datasets/128dim_slices_augmented/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite

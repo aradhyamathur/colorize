@@ -98,9 +98,9 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 60
+	BATCH_SIZE = 80
 
-LAMBDA = 1.0
+LAMBDA = 10.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
     #print real_data.size()
     alpha = torch.rand(BATCH_SIZE, channels, 1, 1)
@@ -130,7 +130,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	draw_iter = 50
 	all_save_iter = 500
 	cur_save_iter = 100
-	test_iter = 1000
+	test_iter = 500
 
 	if args.test_mode:
 		draw_iter = 1
@@ -205,8 +205,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
-				# d_l = 	 d_loss_fake + d_loss_real #GAN LOSS
-				grad_penalty = calc_gradient_penalty(model_d, x.data, out.data)
+				# d_l =  d_loss_fake + d_loss_real #GAN LOSS
+				grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
 				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
 				d_loss = d_l + grad_penalty
 				d_loss.backward()
@@ -234,7 +234,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item())
+			value = 'Iter : %d Batch: %d/%d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f\n'%(i, j, len(train_dataloader), loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())

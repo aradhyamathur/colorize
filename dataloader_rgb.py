@@ -16,7 +16,8 @@ import skimage
 from skimage import util
 from skimage import img_as_float
 from torchvision import transforms
-
+import random
+random.seed(123)
 # DATA_DIR = '../data/sub_vol_outputs_slices/'
 COLOR_DIR = '/color_slices/'
 SCAN_DIR = '/scan_slices/'
@@ -58,7 +59,15 @@ def generate_train_test_split(DATA_DIR):
     color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
     scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
 
-    X_train, X_test, y_train, y_test = train_test_split(scan_images, color_images, test_size=0.2, random_state=123)
+    c=[]
+    s= []
+    indices = list(range(len(color_images)))
+    random.shuffle(indices)
+    for i in range(80000):
+        c.append(color_images[indices[i]])
+        s.append(scan_images[indices[i]])
+
+    X_train, X_test, y_train, y_test = train_test_split(s, c, test_size=0.2, random_state=123)
     return X_train, X_test, y_train, y_test
 
 
@@ -120,7 +129,7 @@ class EfficientImageDataTestSet(Dataset):
 def create_dataloader(DATA_DIR, X, y, batch_size=1, shuffle=True):
     
     dset = EfficientImageDataSet(X, y, DATA_DIR)
-    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
+    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=2)
     return dataloader
 
 
@@ -128,7 +137,7 @@ def create_testdataloader(DATA_DIR, X, y, batch_size=1, shuffle=False):
     
     dset = EfficientImageDataTestSet(X, y, DATA_DIR)
     random_sampler =  RandomSampler(dset)
-    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=4, sampler=random_sampler)
+    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=2, sampler=random_sampler)
     return dataloader
 
 
