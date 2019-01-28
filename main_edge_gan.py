@@ -9,7 +9,7 @@ import numpy as np
 import tqdm
 import argparse
 import os
-from model import UNetEncoder, Discriminator, EdgeLossSobel3Channel
+from model import UNetEncDec, Discriminator, EdgeLossSobel3Channel
 from dataloader_rgb import *
 import datetime
 from itertools import cycle
