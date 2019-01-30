@@ -63,7 +63,7 @@ def generate_train_test_split(DATA_DIR):
     s= []
     indices = list(range(len(color_images)))
     random.shuffle(indices)
-    for i in range(80000):
+    for i in range(len(indices)):
         c.append(color_images[indices[i]])
         s.append(scan_images[indices[i]])
 

@@ -138,9 +138,9 @@ class Discriminator(nn.Module):
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
-		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 200)
+		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 500)
 		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(200, 1)
+		self.linear3 = nn.Linear(500, 1)
 
 		# self.bn1 = nn.BatchNorm2d(512)
 		# self.bn2 = nn.BatchNorm2d(512)
