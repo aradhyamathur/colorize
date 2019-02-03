@@ -100,10 +100,10 @@ if args.batch_size:
 else:
 	BATCH_SIZE = 80
 
-LAMBDA = 10.0
+LAMBDA = 1.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
     #print real_data.size()
-    alpha = torch.rand(BATCH_SIZE, channels, 1, 1)
+    alpha = torch.rand(real_data.shape[0], channels, 1, 1)
     # print(alpha.shape)
     alpha = alpha.expand(real_data.size())
     alpha = alpha.to(device)
@@ -263,8 +263,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				print('SAVING MODEL')
 				torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur.pt')
 				torch.save(model_d.state_dict(), cur_model_dir + 'colorize_disc_cur.pt')
-				# if loss_G < lowest:
-				# 	torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur_low.pt')
+				if loss_G < lowest:
+					torch.save(model_g.state_dict(), cur_model_dir + 'colorize_gen_cur_low.pt')
 				print('SAVED CURRENT')
 
 			if args.test_mode or (j % test_iter == 0 and j != 0) :
