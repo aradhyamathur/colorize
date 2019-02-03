@@ -58,12 +58,13 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
 def generate_train_test_split(DATA_DIR):
     color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
     scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
-
+    # d_size = len(indices)
+    d_size = 80000
     c=[]
     s= []
     indices = list(range(len(color_images)))
     random.shuffle(indices)
-    for i in range(len(indices)):
+    for i in range(d_size):
         c.append(color_images[indices[i]])
         s.append(scan_images[indices[i]])
 
