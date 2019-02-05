@@ -59,7 +59,7 @@ def generate_train_test_split(DATA_DIR):
     color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
     scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
     # d_size = len(indices)
-    d_size = 80000
+    d_size = 180000
     c=[]
     s= []
     indices = list(range(len(color_images)))
@@ -130,7 +130,7 @@ class EfficientImageDataTestSet(Dataset):
 def create_dataloader(DATA_DIR, X, y, batch_size=1, shuffle=True):
     
     dset = EfficientImageDataSet(X, y, DATA_DIR)
-    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=1)
     return dataloader
 
 
@@ -138,7 +138,7 @@ def create_testdataloader(DATA_DIR, X, y, batch_size=1, shuffle=False):
     
     dset = EfficientImageDataTestSet(X, y, DATA_DIR)
     random_sampler =  RandomSampler(dset)
-    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=2, sampler=random_sampler)
+    dataloader = DataLoader(dset, batch_size=batch_size, shuffle=shuffle, num_workers=1, sampler=random_sampler)
     return dataloader
 
 

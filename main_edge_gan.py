@@ -98,9 +98,9 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 80
+	BATCH_SIZE = 250
 
-LAMBDA = 1.0
+LAMBDA = 5.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
     #print real_data.size()
     alpha = torch.rand(real_data.shape[0], channels, 1, 1)
@@ -128,9 +128,9 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	print("Total Train batches :", len(train_dataloader), "Total test batches:", len(test_dataloader))
 	global summary_writer
 	draw_iter = 50
-	all_save_iter = 500
-	cur_save_iter = 100
-	test_iter = 500
+	all_save_iter = int(len(train_dataloader)*0.25)
+	cur_save_iter = int(len(train_dataloader)*0.5)
+	test_iter = int(len(train_dataloader)*0.5)
 
 	if args.test_mode:
 		draw_iter = 1
@@ -410,7 +410,7 @@ def main():
 	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
 
 	generator = AutoEncoder(out_channels=3)
-	discriminator = Discriminator(128, 3)
+	discriminator = Discriminator(args.image_dim, 3)
 
 	if args.load_prev_model_gen:
 		generator.load_state_dict(torch.load(args.load_prev_model_gen))
