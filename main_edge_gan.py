@@ -98,7 +98,7 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 250
+	BATCH_SIZE = 200
 
 LAMBDA = 5.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):

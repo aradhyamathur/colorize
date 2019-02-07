@@ -12,14 +12,14 @@ class Encoder(nn.Module):
 		self.conv2 = nn.Conv2d(128, 256, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv4 = nn.Conv2d(256, 512, 3, padding=1,stride=2)
-		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1, stride=2)  
+		self.conv5 = nn.Conv2d(512, 2048, 3, padding=1, stride=2)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
 		self.bn1 = nn.BatchNorm2d(128)
 		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(512)
-		self.bn5 = nn.BatchNorm2d(1024)
+		self.bn5 = nn.BatchNorm2d(2048)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -69,14 +69,14 @@ class ColorDecoderConvTrans(nn.Module):
 		self.upsample1 = nn.Upsample(scale_factor=4)
 		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(1024, 512, 3, padding=1, stride=2, output_padding=1)
+		self.conv1 = nn.ConvTranspose2d(2048, 512, 3, padding=1, stride=2, output_padding=1)
 		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
 		# self.conv4 = nn.Conv2d(512, 128, 3, padding=1)
 		self.conv5 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
-		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
+		# self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
+		self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(256)
@@ -84,7 +84,7 @@ class ColorDecoderConvTrans(nn.Module):
 		self.bn4 = nn.BatchNorm2d(128)
 		# self.bn5 = nn.BatchNorm2d(256)
 		# self.bn6 = nn.BatchNorm2d(256)
-		self.bn7 = nn.BatchNorm2d(64)
+		# self.bn7 = nn.BatchNorm2d(64)
 
 
 		for m in self.modules():
@@ -117,7 +117,7 @@ class ColorDecoderConvTrans(nn.Module):
 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
 
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn7(F.leaky_relu(self.conv7(out)))
+		# out = self.bn7(F.leaky_relu(self.conv7(out)))
 
 		out = F.sigmoid(self.conv8(out))
 		#print('Conv4: ',  out.shape)
@@ -138,9 +138,9 @@ class Discriminator(nn.Module):
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
-		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 200)
+		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 250)
 		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(200, 1)
+		self.linear3 = nn.Linear(250, 1)
 
 		# self.bn1 = nn.BatchNorm2d(512)
 		# self.bn2 = nn.BatchNorm2d(512)

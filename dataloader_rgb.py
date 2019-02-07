@@ -59,7 +59,7 @@ def generate_train_test_split(DATA_DIR):
     color_images = np.array(os.listdir(DATA_DIR + COLOR_DIR))
     scan_images = np.array(os.listdir(DATA_DIR + SCAN_DIR))
     # d_size = len(indices)
-    d_size = 180000
+    d_size = len(color_images)
     c=[]
     s= []
     indices = list(range(len(color_images)))
