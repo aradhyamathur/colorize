@@ -98,7 +98,7 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 200
+	BATCH_SIZE = 80
 
 LAMBDA = 5.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
@@ -206,14 +206,14 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				# d_loss_real = criterion(d_real.squeeze(1), target_y)
 				# d_loss_fake =  criterion(d_fake.squeeze(1), target_x) # add .squeeze for BCE LOSS
 				# d_l =  d_loss_fake + d_loss_real #GAN LOSS
-				grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
+				# grad_penalty = calc_gradient_penalty(model_d, y.data, out.data)
 				d_l = -(torch.mean(d_real) - torch.mean(d_fake))  # wasserstein D loss
-				d_loss = d_l + grad_penalty
+				d_loss = d_l# + grad_penalty
 				d_loss.backward()
 				optimizer_d.step()
 
-			# for p in model_d.parameters():
-				# p.data.clamp_(-1.0, 1.0)
+			for p in model_d.parameters():
+				p.data.clamp_(-0.1, 0.1)
 			optimizer_d.zero_grad()
 			for k in range(1):
 				optimizer_g.zero_grad()
@@ -422,6 +422,10 @@ def main():
 	generator = generator.to(device)
 	discriminator = discriminator.to(device)
 
+
+	# generator.load_state_dict(torch.load('edge_gan_trained_models/2019-02-07 11:57:28.954306_random_axis_model_redux_wgan_gp_lite_sobel_l1_non_zero/colorize2gen_batch_5_2115.pt'))
+	# discriminator.load_state_dict(torch.load('edge_gan_trained_models/2019-02-07 11:57:28.954306_random_axis_model_redux_wgan_gp_lite_sobel_l1_non_zero/colorize2disc_batch_5_2115.pt'))
+	# print('Loaded prev #########################')
 	if args.load_segmentation:
 		print('Loading segmentation model')
 		path = args.load_segmentation
