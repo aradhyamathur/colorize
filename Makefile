@@ -28,7 +28,7 @@ test_edge_gan:
 	# python main_edge_detect.py --data_path ../color_my_pytorch_slices/data/slices  --image_dim 128 --test_mode True --device cuda
 
 run_edge_gan:
-	python main_edge_gan.py --data_path ../datasets/random_axis/subslice_f/non_zero/  --image_dim 128 --device cuda --custom_name random_axis_model_redux_wgan_nogp_lite_sobel_l1 --description sobel_edge_without_dataparallel_grad_penalty_1_non_zerodset_64dim
+	python main_edge_gan.py --data_path ../datasets/random_axis/subslice_f/non_zero/  --image_dim 128 --device cuda --custom_name random_axis_model_redux_wgan_gp_clamp09_lite_sobel_l1 --description sobel_edge_without_dataparallel_grad_penalty_1_non_zerodset_64dim
 	#--load_segmentation "../segmentation vol_generate/data/128dim_slices/fcn/weights.pth"
 # 	python main_edge_gan.py --data_path ../datasets/128dim_slices/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite_lap4_edge_mult_1_gfast_weight_clip_5_point_0
 	# python main_edge_gan.py --data_path ../datasets/128dim_slices_augmented/slices/  --image_dim 128 --device cuda --custom_name wasserstein_lite
