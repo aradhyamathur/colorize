@@ -2,24 +2,23 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
 class Encoder(nn.Module):
 
 	def __init__(self):
 
 		super(Encoder, self).__init__()
-		self.conv1 = nn.Conv2d(1, 128, 3, padding=1, stride=2)
+		self.conv1 = nn.Conv2d(3, 128, 3, padding=1, stride=2)
 		self.conv2 = nn.Conv2d(128, 256, 3, padding=1)
 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv4 = nn.Conv2d(256, 512, 3, padding=1,stride=2)
-		self.conv5 = nn.Conv2d(512, 2048, 3, padding=1, stride=2)  
+		self.conv4 = nn.Conv2d(256, 512, 3, padding=1, stride=2)
+		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1, stride=2)  
 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
 		self.bn1 = nn.BatchNorm2d(128)
 		self.bn2 = nn.BatchNorm2d(256)
 		# self.bn3 = nn.BatchNorm2d(512)
 		self.bn4 = nn.BatchNorm2d(512)
-		self.bn5 = nn.BatchNorm2d(2048)
+		self.bn5 = nn.BatchNorm2d(1024)
 		# self.bn6 = nn.BatchNorm2d(256)
 		# self.bn7 = nn.BatchNorm2d(128)	
 
@@ -51,6 +50,7 @@ class Encoder(nn.Module):
 		# print('Conv4: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
 		out = self.bn5(F.leaky_relu(self.conv5(out)))
+
 		# print('Conv5: ', out.shape)
 		# out = F.dropout2d(out, p=0.3, training=self.training)
 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
@@ -66,17 +66,15 @@ class ColorDecoderConvTrans(nn.Module):
 	def __init__(self, out_channels=1):
 
 		super(ColorDecoderConvTrans, self).__init__()
-		self.upsample1 = nn.Upsample(scale_factor=4)
-		self.upsample2 = nn.Upsample(scale_factor=2)
 
-		self.conv1 = nn.ConvTranspose2d(2048, 512, 3, padding=1, stride=2, output_padding=1)
-		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
-		self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
-		# self.conv4 = nn.Conv2d(512, 128, 3, padding=1)
-		self.conv5 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
+		self.conv1 = nn.ConvTranspose2d(1024, 512, 3, padding=1, stride=2, output_padding=1)
+		# self.conv2 = nn.Conv2d(512, 256, 3, padding=1)
+		self.conv2 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+		# self.conv4 = nn.Conv2d(256, 128, 3, padding=1)
+		self.conv4 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
-		# self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
-		self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
+		self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
+		self.conv8 = nn.Conv2d(64, out_channels, 3, padding=1)
 
 		self.bn1 = nn.BatchNorm2d(512)
 		self.bn2 = nn.BatchNorm2d(256)
@@ -84,7 +82,7 @@ class ColorDecoderConvTrans(nn.Module):
 		self.bn4 = nn.BatchNorm2d(128)
 		# self.bn5 = nn.BatchNorm2d(256)
 		# self.bn6 = nn.BatchNorm2d(256)
-		# self.bn7 = nn.BatchNorm2d(64)
+		self.bn7 = nn.BatchNorm2d(64)
 
 
 		for m in self.modules():
@@ -100,7 +98,7 @@ class ColorDecoderConvTrans(nn.Module):
 
 		# out = self.upsample1(out)
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn2(F.leaky_relu(self.conv3(out)))
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 		#print('Conv2: ', out.shape)
 
 		# out = self.upsample2(out)
@@ -108,7 +106,7 @@ class ColorDecoderConvTrans(nn.Module):
 		# out = self.bn3(F.leaky_relu(self.conv3(out)))
 		#print('Conv3: ', out.shape)
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		out = self.bn4(F.leaky_relu(self.conv5(out)))
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
 
 		# out = F.dropout2d(out, p=0.3, training=self.training)
 		# out = self.bn5(F.leaky_relu(self.conv5(out)))
@@ -117,10 +115,10 @@ class ColorDecoderConvTrans(nn.Module):
 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
 
 		out = F.dropout2d(out, p=0.3, training=self.training)
-		# out = self.bn7(F.leaky_relu(self.conv7(out)))
+		out = self.bn7(F.leaky_relu(self.conv7(out)))
 
 		out = F.sigmoid(self.conv8(out))
-		#print('Conv4: ',  out.shape)
+		# print('Conv4: ',  out.shape)
 
 		return out
 
@@ -134,18 +132,18 @@ class Discriminator(nn.Module):
 		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
 		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
-		self.convDropout = nn.Dropout2d(p=0.3)
+		
 		self.dropout1 = nn.Dropout(p=0.3)
 		self.dropout2 = nn.Dropout(p=0.2) 
 
-		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 250)
+		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 200)
 		# self.linear2 = nn.Linear(100, 50)
-		self.linear3 = nn.Linear(250, 1)
+		self.linear3 = nn.Linear(200, 1)
 
-		# self.bn1 = nn.BatchNorm2d(512)
-		# self.bn2 = nn.BatchNorm2d(512)
-		# self.bn3 = nn.BatchNorm2d(256)
-		# self.bn4 = nn.BatchNorm2d(64) 
+		self.bn1 = nn.BatchNorm2d(512)
+		self.bn2 = nn.BatchNorm2d(512)
+		self.bn3 = nn.BatchNorm2d(256)
+		self.bn4 = nn.BatchNorm2d(64) 
 
 		for m in self.modules():
 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
@@ -156,26 +154,15 @@ class Discriminator(nn.Module):
 
 		# print('Discriminator')
 
-		out = F.leaky_relu(self.conv1(x))
-		# out = self.bn1(out)
+		out = self.bn1(F.leaky_relu(self.conv1(x)))
 		# print(out.shape)
-		
-		out = F.leaky_relu(self.conv2(out))
-		out = self.convDropout(out)
-		# out = self.bn2(out)
+		out = self.bn2(F.leaky_relu(self.conv2(out)))
 		# print(out.shape)
-		
-		out = F.leaky_relu(self.conv3(out))
-		out = F.dropout2d(out, p=0.2)
-		# out = self.bn3(out)
+		out = self.bn3(F.leaky_relu(self.conv3(out)))
 		# print(out.shape)
-
-		out = F.leaky_relu(self.conv4(out))
-		out = F.dropout2d(out, p=0.2)
-		# out = self.bn4(out)
+		out = self.bn4(F.leaky_relu(self.conv4(out)))
 		# print('conv4', out.shape)
 		# print(x.shape[0])
-
 		out = out.view(x.shape[0], -1)
 		# print('reshaped ', out.shape)
 		out = F.leaky_relu(self.linear1(out))
@@ -186,6 +173,190 @@ class Discriminator(nn.Module):
 		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
 		# out = F.sigmoid(self.linear3(out))
 		return out
+
+# class Encoder(nn.Module):
+
+# 	def __init__(self, in_channels=3):
+
+# 		super(Encoder, self).__init__()
+# 		self.conv1 = nn.Conv2d(in_channels, 128, 3, padding=1, stride=2)
+# 		self.conv2 = nn.Conv2d(128, 256, 3, padding=1)
+# 		# self.conv3 = nn.Conv2d(512, 512, 3, padding=1)
+# 		self.conv4 = nn.Conv2d(256, 512, 3, padding=1,stride=2)
+# 		self.conv5 = nn.Conv2d(512, 1024, 3, padding=1, stride=2)  
+# 		# self.conv6 = nn.Conv2d(128, 256, 3, padding=1, stride=2)
+# 		# self.conv7 = nn.Conv2d(256, 128, 3, padding=1, stride=2)
+# 		self.bn1 = nn.BatchNorm2d(128)
+# 		self.bn2 = nn.BatchNorm2d(256)
+# 		# self.bn3 = nn.BatchNorm2d(512)
+# 		self.bn4 = nn.BatchNorm2d(512)
+# 		self.bn5 = nn.BatchNorm2d(1024)
+# 		# self.bn6 = nn.BatchNorm2d(256)
+# 		# self.bn7 = nn.BatchNorm2d(128)	
+
+
+
+# 		for m in self.modules():
+# 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+# 				print('Initializing', m)
+# 				nn.init.xavier_normal_(m.weight)
+	
+# 	def forward(self, x):
+
+# 		#print('ENCODER')
+
+# 		out = self.bn1(F.leaky_relu(self.conv1(x)))
+
+# 		# print('Conv1:', out.shape)
+
+# 		out = self.bn2(F.leaky_relu(self.conv2(out)))
+
+# 		# print('Conv2: ', out.shape)
+# 		out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn3(F.leaky_relu(self.conv3(out)))
+
+# 		# print('Conv3: ', out.shape)
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# print(out.shape)
+# 		out = self.bn4(F.leaky_relu(self.conv4(out)))
+# 		# print('Conv4: ', out.shape)
+# 		out = F.dropout2d(out, p=0.3, training=self.training)
+# 		out = self.bn5(F.leaky_relu(self.conv5(out)))
+# 		# print('Conv5: ', out.shape)
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
+# 		# print('Conv6: ', out.shape)
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn7(F.leaky_relu(self.conv7(out)))
+# 		# print('Conv7: ', out.shape)
+# 		return out
+
+
+# class ColorDecoderConvTrans(nn.Module):
+
+# 	def __init__(self, out_channels=1):
+
+# 		super(ColorDecoderConvTrans, self).__init__()
+# 		self.upsample1 = nn.Upsample(scale_factor=4)
+# 		self.upsample2 = nn.Upsample(scale_factor=2)
+
+# 		self.conv1 = nn.ConvTranspose2d(1024, 512, 3, padding=1, stride=2, output_padding=1)
+# 		# self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+# 		self.conv3 = nn.ConvTranspose2d(512, 256, 3, padding=1, stride=2, output_padding=1)
+# 		# self.conv4 = nn.Conv2d(512, 128, 3, padding=1)
+# 		self.conv5 = nn.ConvTranspose2d(256, 128, 3, padding=1, stride=2, output_padding=1)
+# 		# self.conv6 = nn.Conv2d(128,	 256, 3, padding=1)
+# 		# self.conv7 = nn.Conv2d(128, 64, 3, padding=1)
+# 		self.conv8 = nn.Conv2d(128, out_channels, 3, padding=1)
+
+# 		self.bn1 = nn.BatchNorm2d(512)
+# 		self.bn2 = nn.BatchNorm2d(256)
+# 		# self.bn3 = nn.BatchNorm2d(512)
+# 		self.bn4 = nn.BatchNorm2d(128)
+# 		# self.bn5 = nn.BatchNorm2d(256)
+# 		# self.bn6 = nn.BatchNorm2d(256)
+# 		# self.bn7 = nn.BatchNorm2d(64)
+
+
+# 		for m in self.modules():
+# 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+# 				print('Initializing', m)
+# 				nn.init.xavier_normal_(m.weight)
+
+# 	def forward(self, x):
+# 		# print(x.shape)
+# 		#print('DECODER')
+# 		out = self.bn1(F.leaky_relu(self.conv1(x)))
+# 		#print('Conv1 : ', out.shape)
+
+# 		# out = self.upsample1(out)
+# 		out = F.dropout2d(out, p=0.3, training=self.training)
+# 		out = self.bn2(F.leaky_relu(self.conv3(out)))
+# 		#print('Conv2: ', out.shape)
+
+# 		# out = self.upsample2(out)
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn3(F.leaky_relu(self.conv3(out)))
+# 		#print('Conv3: ', out.shape)
+# 		out = F.dropout2d(out, p=0.3, training=self.training)
+# 		out = self.bn4(F.leaky_relu(self.conv5(out)))
+
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn5(F.leaky_relu(self.conv5(out)))
+
+# 		# out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn6(F.leaky_relu(self.conv6(out)))
+
+# 		out = F.dropout2d(out, p=0.3, training=self.training)
+# 		# out = self.bn7(F.leaky_relu(self.conv7(out)))
+
+# 		out = F.sigmoid(self.conv8(out))
+# 		#print('Conv4: ',  out.shape)
+
+# 		return out
+
+# class Discriminator(nn.Module):
+
+# 	def __init__(self, dim, in_channels):
+
+# 		super(Discriminator, self).__init__()
+		
+# 		self.conv1 = nn.Conv2d(in_channels, 512, 3, padding=1,stride=2)
+# 		self.conv2 = nn.Conv2d(512, 512, 3, padding=1)
+# 		self.conv3 = nn.Conv2d(512, 256, 3, padding=1, stride=2)
+# 		self.conv4 = nn.Conv2d(256, 64, 3, padding=1, stride=2)
+# 		self.convDropout = nn.Dropout2d(p=0.3)
+# 		self.dropout1 = nn.Dropout(p=0.3)
+# 		self.dropout2 = nn.Dropout(p=0.2) 
+
+# 		self.linear1 = nn.Linear(64 * int(dim/8) * int(dim/8), 250)
+# 		# self.linear2 = nn.Linear(100, 50)
+# 		self.linear3 = nn.Linear(250, 1)
+
+# 		# self.bn1 = nn.BatchNorm2d(512)
+# 		# self.bn2 = nn.BatchNorm2d(512)
+# 		# self.bn3 = nn.BatchNorm2d(256)
+# 		# self.bn4 = nn.BatchNorm2d(64) 
+
+# 		for m in self.modules():
+# 			if isinstance(m,nn.Conv2d) or isinstance(m, nn.Linear):
+# 				print('Initializing', m)
+# 				nn.init.xavier_normal_(m.weight)
+
+# 	def forward(self, x):
+
+# 		# print('Discriminator')
+
+# 		out = F.leaky_relu(self.conv1(x))
+# 		# out = self.bn1(out)
+# 		# print(out.shape)
+		
+# 		out = F.leaky_relu(self.conv2(out))
+# 		out = self.convDropout(out)
+# 		# out = self.bn2(out)
+# 		# print(out.shape)
+		
+# 		out = F.leaky_relu(self.conv3(out))
+# 		out = F.dropout2d(out, p=0.2)
+# 		# out = self.bn3(out)
+# 		# print(out.shape)
+
+# 		out = F.leaky_relu(self.conv4(out))
+# 		out = F.dropout2d(out, p=0.2)
+# 		# out = self.bn4(out)
+# 		# print('conv4', out.shape)
+# 		# print(x.shape[0])
+
+# 		out = out.view(x.shape[0], -1)
+# 		# print('reshaped ', out.shape)
+# 		out = F.leaky_relu(self.linear1(out))
+
+# 		out = self.dropout1(out)
+# 		# out = F.relu(self.linear2(out))
+# 		# out = self.dropout2(out)
+# 		out = F.leaky_relu(self.linear3(out)) # uncomment for wgAn
+# 		# out = F.sigmoid(self.linear3(out))
+# 		return out
 
 
 

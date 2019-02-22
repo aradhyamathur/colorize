@@ -10,7 +10,7 @@ import tqdm
 import argparse
 import os
 from model import AutoEncoder, Discriminator, EdgeLossLaplace3CHANNEL, EdgeLoss, EdgeLossSobel3Channel
-from dataloader_rgb import *
+from dataloader_scg import *
 import datetime
 from itertools import cycle
 import random
@@ -26,6 +26,7 @@ from utils import *
 from torchvision.utils import *
 from torchvision import transforms
 from torch import autograd
+from sklearn.utils import shuffle
 
 torch.cuda.set_device(0)
 
@@ -98,9 +99,9 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 80
+	BATCH_SIZE = 35
 
-LAMBDA = 1.0
+LAMBDA = 5.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
     #print real_data.size()
     alpha = torch.rand(real_data.shape[0], channels, 1, 1)
@@ -174,7 +175,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 	save_model_info(model_g, model_d, learning_rate_gen, learning_rate_disc, cur_model_dir, start_epoch, end_epoch, learning_rate_edge, optimizer_g, optimizer_d, args.description) # to be changed
 	# print(type(criterion_edge))
 	for i in range(start_epoch, end_epoch):
-		for j, (name, x, y) in enumerate(train_dataloader):
+		for j, (name, scan, color, cgray) in enumerate(train_dataloader):
 
 			model_g.train()
 			model_d.train()
@@ -190,9 +191,21 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# exit()
 			# x = x + torch.randn(x.shape)*1e-2 
 			# x = x + noise
+			# scan = scan.repeat(1,3,1,1)
+			image_x = torch.cat([cgray.repeat(1,3,1,1), scan.repeat(1,3,1,1)])
+			x_np = image_x.numpy()
+
+			y = torch.cat([color, color])
+			y_np = y.numpy()
+
+			color_np, x_np = shuffle(y_np, x_np)
+
+			x = torch.from_numpy(x_np)
+			y = torch.from_numpy(color_np)
+
 			x = x.to(device)
 			y = y.to(device)
-			edge_image_x = x.repeat(1,3, 1, 1)
+			# edge_image_x = x.repeat(1, 3, 1, 1)
 			optimizer_g.zero_grad()
 
 			for k in range(1):
@@ -220,7 +233,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 
 				out = model_g(x)
 				d_fake = model_d(out)
-				loss_edge, g1, g2 = criterion_edge(out, edge_image_x)
+				loss_edge, g1, g2 = criterion_edge(out, x)
 				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 				# tv_loss = 1e-6*tv_loss
 
@@ -298,14 +311,14 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 	diffs_avg = []
 
 	with torch.no_grad():
-		for i, (name, x, y) in enumerate(test_loader):
-
+		for i, (name, x, y, cg) in enumerate(test_loader):
+			x = x.repeat(1, 3, 1, 1)
 			x = x.to(device)
 			# y_l = y_l.to(device)
 
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
-			loss, g1, g2 = criterion_edge(out, x.repeat(1, 3, 1, 1))
+			loss, g1, g2 = criterion_edge(out, x)
 			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
 			# tv_loss = 1e-6*tv_loss
 			# loss = F.mse_loss(out, x_in)
@@ -405,9 +418,9 @@ def main():
 		batch_size_test = args.batch_size_test 
 
 	
-	X_train, X_test, y_train, y_test = generate_train_test_split(args.data_path)
-	train_dataloader = create_dataloader(args.data_path, X_train, y_train, batch_size_train)
-	test_dataloader = create_testdataloader(args.data_path, X_test, y_test, batch_size_test)
+	color_train, scan_train, color_test, scan_test = generate_train_test_split(args.data_path)
+	train_dataloader = create_dataloader(args.data_path, color_train, scan_train, batch_size_train)
+	test_dataloader = create_testdataloader(args.data_path, color_test, scan_test, batch_size_test)
 
 	generator = AutoEncoder(out_channels=3)
 	discriminator = Discriminator(args.image_dim, 3)

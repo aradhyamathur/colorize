@@ -38,7 +38,8 @@ def process_images(DATA_DIR ,image, OUT_TYPE_DIR, color=True):
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         image = img_as_float(io.imread(base_dir + '/' + image))
-
+        image_gray = skimage.color.rgb2gray(image)
+        return (image, image_gray)
         # print('color:', image.dtype)
         # image = image.astype(np.int8)
         # image = image[:, :, 1:]  # keeping all the channels dropping the luminosity
