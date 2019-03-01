@@ -9,6 +9,9 @@ from torchvision import transforms
 from skimage import img_as_float
 from shutil import copyfile
 from skimage.transform import rescale
+import numpy as np
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--load_prev_model_gen', help="model path")
 parser.add_argument('--input_dir', help="input image directory")
@@ -41,7 +44,7 @@ device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	# device = torch.device(args.device)
 
 # gen = AutoEncoder(out_channels=3)
-gen = nn.DataParallel(AutoEncoder(out_channels=3))
+gen = AutoEncoder(out_channels=3)
 gen.load_state_dict(torch.load(args.load_prev_model_gen))
 
 gen = gen.to(device)
@@ -57,7 +60,9 @@ for i, img in enumerate(images):
 	if args.image_scale:
 		image = rescale(image, args.image_scale)
 	image = img_as_float(skimage.color.rgb2gray(image))
-	t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).to(device)
+	# image = np.expand_dims(image, axis=0)
+	# image = np.repeat(image, 3, axis=0)
+	t_img = trans(torch.from_numpy(image).float().unsqueeze(0).permute(1,2,0).numpy()).unsqueeze(0).repeat(1,3,1,1).to(device)
 	# print(t_img.shape)
 
 	# exit()
