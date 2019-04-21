@@ -28,7 +28,7 @@ from torchvision import transforms
 from torch import autograd
 from sklearn.utils import shuffle
 
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', help='path to data folder', required=True)
@@ -99,7 +99,7 @@ if not os.path.exists(LOG_DIR):
 if args.batch_size:
 	BATCH_SIZE = args.BATCH_SIZE
 else:
-	BATCH_SIZE = 35
+	BATCH_SIZE = 45
 
 LAMBDA = 5.0
 def calc_gradient_penalty(netD, real_data, fake_data, channels=1):
@@ -234,8 +234,8 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 				out = model_g(x)
 				d_fake = model_d(out)
 				loss_edge, g1, g2 = criterion_edge(out, x)
-				# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-				# tv_loss = 1e-6*tv_loss
+				tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+				tv_loss = 1e-7*tv_loss
 
 				# g_loss = criterion(d_fake.squeeze(1), target_y) # GAN Loss
 				g_loss = -torch.mean(d_fake) # Wasserstein G loss
@@ -247,7 +247,7 @@ def train(model_g, model_d, learning_rate_gen, learning_rate_disc, learning_rate
 			# print('done.......')
 			# exit()
 
-			value = 'Iter : %d Batch: %d/%d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f Grad Penalty: %.4f\n'%(i, j, len(train_dataloader), loss_edge.item(), g_loss.item(), 0, d_l.item(), loss_G.item(), d_loss.item(), grad_penalty.item())
+			value = 'Iter : %d Batch: %d/%d Edge loss: %.4f G Loss: %.4f TV Loss: %.4f D Loss: %.4f Total Gloss: %.4f Total DLoss %.4f Grad Penalty: %.4f\n'%(i, j, len(train_dataloader), loss_edge.item(), g_loss.item(), tv_loss.item(), d_l.item(), loss_G.item(), d_loss.item(), grad_penalty.item())
 			print(value)	
 			summary_writer.add_scalar("Edge Loss", loss_edge.item())
 			summary_writer.add_scalar("Gen Loss", g_loss.item())
@@ -319,8 +319,8 @@ def test_model(model, test_loader, epoch, now, batch_idx, criterion_edge):
 			# out = edge_detector(model(x).cpu())
 			out = model(x)
 			loss, g1, g2 = criterion_edge(out, x)
-			# tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
-			# tv_loss = 1e-6*tv_loss
+			tv_loss = torch.sum(torch.abs(out[:, :, :, :-1] - out[:, :, :, 1:])) + torch.sum(torch.abs(out[:, :, :-1, :] - out[:, :, 1:, :]))
+			tv_loss = 1e-7*tv_loss
 			# loss = F.mse_loss(out, x_in)
 			print('Test batch %d Edge Loss %.4f TV Loss %.4f'%(i, loss.item(), 0))
 
@@ -436,8 +436,8 @@ def main():
 	discriminator = discriminator.to(device)
 
 
-	# generator.load_state_dict(torch.load('edge_gan_trained_models/2019-02-07 11:57:28.954306_random_axis_model_redux_wgan_gp_lite_sobel_l1_non_zero/colorize2gen_batch_5_2115.pt'))
-	# discriminator.load_state_dict(torch.load('edge_gan_trained_models/2019-02-07 11:57:28.954306_random_axis_model_redux_wgan_gp_lite_sobel_l1_non_zero/colorize2disc_batch_5_2115.pt'))
+	generator.load_state_dict(torch.load('edge_gan_trained_models/2019-04-04 02:00:29.286513_random_axis_model_redux_wgan_gp_lite_sobel_l1_with_tv1e7/colorize2gen_batch_3_1175.pt'))
+	discriminator.load_state_dict(torch.load('edge_gan_trained_models/2019-04-04 02:00:29.286513_random_axis_model_redux_wgan_gp_lite_sobel_l1_with_tv1e7/colorize2disc_batch_3_1175.pt'))
 	# print('Loaded prev #########################')
 	if args.load_segmentation:
 		print('Loading segmentation model')
